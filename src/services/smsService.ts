@@ -1,28 +1,40 @@
 import { supabase } from './supabase';
 import { Customer } from '../types/database.types';
+
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
+
 // Import Twilio for SMS functionality - handle import dynamically to avoid build issues
 let twilio: any = null;
-try {
-  // This approach prevents build errors if twilio isn't installed
-  twilio = require('twilio');
-} catch (error) {
-  console.warn('Twilio package not available:', error);
-}
+let twilioClient: any = null;
 
 // This would typically be stored in environment variables
 const TWILIO_ACCOUNT_SID = process.env.REACT_APP_TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.REACT_APP_TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.REACT_APP_TWILIO_PHONE_NUMBER;
 
-// Initialize Twilio client if credentials are available
-let twilioClient: any = null;
-if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && twilio) {
+// Only try to load Twilio if we're in a browser-compatible environment
+if (!isBrowser || (isBrowser && window.Buffer)) {
   try {
-    twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-    console.log('Twilio client initialized successfully');
+    // This approach prevents build errors if twilio isn't installed
+    twilio = require('twilio');
+    
+    // Initialize Twilio client if credentials are available
+    if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && twilio) {
+      try {
+        twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+        console.log('Twilio client initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize Twilio client:', error);
+      }
+    } else {
+      console.warn('Twilio credentials not found or twilio package not available');
+    }
   } catch (error) {
-    console.error('Failed to initialize Twilio client:', error);
+    console.warn('Twilio package not available or not compatible with this environment:', error);
   }
+} else {
+  console.warn('Browser environment detected without polyfills - SMS functionality will be simulated');
 }
 
 // Message templates for different notification types
@@ -91,6 +103,11 @@ const logSMSMessage = async (
 };
 
 export const smsService = {
+  // Check if Twilio is properly configured
+  isTwilioConfigured: (): boolean => {
+    return !!twilioClient;
+  },
+  
   // Send an SMS using Twilio API
   sendSMS: async (
     phoneNumber: string, 
@@ -118,32 +135,44 @@ export const smsService = {
       // Use the Twilio API to send the message if available
       if (!twilioClient) {
         // In deployment or if Twilio isn't available, simulate success for preview/testing
-        console.warn('Twilio client not available - simulating SMS sending in deployment preview');
+        console.warn('Twilio client not available - simulating SMS sending in browser environment');
         
         // Log the simulated message
         await logSMSMessage(phoneNumber, messageBody, true);
         
         return { 
           success: true, 
-          message: `SMS simulated successfully in deployment preview. Message would be sent to ${formattedPhoneNumber}` 
+          message: `SMS simulated successfully in browser environment. Message would be sent to ${formattedPhoneNumber}` 
         };
       }
       
-      const message = await twilioClient.messages.create({
-        body: messageBody,
-        from: TWILIO_PHONE_NUMBER,
-        to: formattedPhoneNumber
-      });
-      
-      console.log(`[SMS Service] Message sent successfully. SID: ${message.sid}`);
-      
-      // Log the message to the SMS logs table
-      await logSMSMessage(phoneNumber, messageBody, true);
-      
-      return { 
-        success: true, 
-        message: `SMS sent successfully. Message SID: ${message.sid}` 
-      };
+      try {
+        const message = await twilioClient.messages.create({
+          body: messageBody,
+          from: TWILIO_PHONE_NUMBER,
+          to: formattedPhoneNumber
+        });
+        
+        console.log(`[SMS Service] Message sent successfully. SID: ${message.sid}`);
+        
+        // Log the message to the SMS logs table
+        await logSMSMessage(phoneNumber, messageBody, true);
+        
+        return { 
+          success: true, 
+          message: `SMS sent successfully. Message SID: ${message.sid}` 
+        };
+      } catch (twilioError) {
+        console.error('Twilio API error:', twilioError);
+        
+        // Log the failed message
+        await logSMSMessage(phoneNumber, messageBody, false, String(twilioError));
+        
+        return { 
+          success: false, 
+          message: `Twilio API error: ${twilioError}` 
+        };
+      }
     } catch (error) {
       console.error('Error sending SMS:', error);
       

@@ -23,9 +23,12 @@ const SMSNotifications: React.FC = () => {
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
+  const [isTwilioConfigured, setIsTwilioConfigured] = useState<boolean>(false);
   
   useEffect(() => {
     loadData();
+    // Check if Twilio is properly configured
+    setIsTwilioConfigured(smsService.isTwilioConfigured());
   }, []);
   
   const loadData = async () => {
@@ -375,6 +378,21 @@ const SMSNotifications: React.FC = () => {
   return (
     <div style={pageStyle}>
       <h1 style={headerStyle}>SMS Notifications</h1>
+      
+      {/* Twilio Configuration Warning */}
+      {!isTwilioConfigured && (
+        <div style={{
+          backgroundColor: '#FEF3C7',
+          color: '#92400E',
+          padding: '1rem',
+          borderRadius: '0.375rem',
+          marginBottom: '1.5rem',
+          border: '1px solid #F59E0B',
+        }}>
+          <strong>Warning:</strong> Twilio is not properly configured or available in this environment. 
+          SMS sending will be simulated. Messages will be logged but not actually sent.
+        </div>
+      )}
       
       {/* Display notification templates */}
       <div style={cardStyle}>

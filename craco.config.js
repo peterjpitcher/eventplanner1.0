@@ -25,7 +25,12 @@ module.exports = {
           "assert": require.resolve("assert/"),
           "path": require.resolve("path-browserify"),
           "util": require.resolve("util/"),
-          "zlib": require.resolve("browserify-zlib")
+          "zlib": require.resolve("browserify-zlib"),
+          // Add empty mocks for Node.js modules that can't be polyfilled in browser
+          "fs": false,
+          "net": false,
+          "tls": false,
+          "child_process": false
         }
       }
     },
