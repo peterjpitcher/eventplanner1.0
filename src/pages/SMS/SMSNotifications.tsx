@@ -176,17 +176,37 @@ const SMSNotifications: React.FC = () => {
   };
   
   const handleForceProductionMode = () => {
-    const forced = smsService.forceSMSProductionMode();
-    setTwilioForced(forced);
-    if (forced) {
-      setResult({
-        success: true,
-        message: 'Twilio client force-initialized for production mode. SMS messages will now be sent via Twilio API.'
+    try {
+      // Perform a test API call directly to Twilio to verify connectivity
+      fetch(`https://api.twilio.com/2010-04-01/Accounts/${process.env.REACT_APP_TWILIO_ACCOUNT_SID}/Messages.json`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Basic ' + btoa(`${process.env.REACT_APP_TWILIO_ACCOUNT_SID}:${process.env.REACT_APP_TWILIO_AUTH_TOKEN}`)
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          setTwilioForced(true);
+          setResult({
+            success: true,
+            message: 'Twilio API connection verified. SMS messages will now be sent using direct API calls.'
+          });
+        } else {
+          throw new Error(`API returned ${response.status} ${response.statusText}`);
+        }
+      })
+      .catch(error => {
+        console.error('Error verifying Twilio API connection:', error);
+        setResult({
+          success: false,
+          message: `Failed to verify Twilio API connection: ${error.message}`
+        });
       });
-    } else {
+    } catch (error) {
+      console.error('Failed to force production mode:', error);
       setResult({
         success: false,
-        message: 'Failed to force production mode. Check console for details.'
+        message: `Failed to force production mode: ${error}`
       });
     }
   };
@@ -396,26 +416,30 @@ const SMSNotifications: React.FC = () => {
     <div style={pageStyle}>
       <h1 style={headerStyle}>SMS Notifications</h1>
       
-      {/* Twilio Configuration Warning */}
-      {!isTwilioConfigured && (
-        <div className="alert alert-warning mt-3">
-          <h4>SMS Service Configuration</h4>
+      {/* SMS Service Configuration Info */}
+      <div className="alert alert-info mt-3">
+        <h4>SMS Service Configuration</h4>
+        <p>
+          {isTwilioConfigured ? 
+            "Twilio credentials are configured. SMS messages can be sent to real phone numbers." :
+            "The SMS service is currently in simulation mode because Twilio is not properly configured."}
+        </p>
+        {!isTwilioConfigured && (
           <p>
-            The SMS service is currently in simulation mode because Twilio is not properly configured.
-            Check your environment variables to enable real SMS sending.
+            Messages will be logged but may not actually be sent to recipients.
           </p>
-          <p>
-            Messages will be logged but not actually sent to recipients.
-          </p>
-          <button 
-            className="btn btn-warning mt-2" 
-            onClick={handleForceProductionMode}
-            disabled={twilioForced}
-          >
-            {twilioForced ? 'Production Mode Enabled' : 'Force Production Mode'}
-          </button>
-        </div>
-      )}
+        )}
+        <button 
+          className={`btn ${twilioForced ? 'btn-success' : 'btn-primary'} mt-2`}
+          onClick={handleForceProductionMode}
+          disabled={twilioForced}
+        >
+          {twilioForced ? 'Direct API Mode Enabled' : 'Enable Direct API Mode'}
+        </button>
+        <p className="mt-2 text-muted small">
+          This ensures messages are sent using direct API calls, bypassing any Node.js dependencies.
+        </p>
+      </div>
       
       {/* Display notification templates */}
       <div style={cardStyle}>

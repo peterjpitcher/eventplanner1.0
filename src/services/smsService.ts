@@ -154,90 +154,80 @@ export const smsService = {
       
       console.log(`[SMS Service] Attempting to send SMS to: ${formattedPhoneNumber}, Message: ${messageBody}`);
       
-      // Try to create a new Twilio client if it doesn't exist yet
-      if (!twilioClient && twilio && TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
-        try {
-          twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-          console.log('Twilio client initialized just-in-time');
-        } catch (error) {
-          console.error('Failed to initialize Twilio client just-in-time:', error);
-        }
-      }
-      
-      // Use the Twilio API to send the message if available
-      if (!twilioClient) {
-        // In deployment or if Twilio isn't available, simulate success for preview/testing
-        console.warn('Twilio client not available - simulating SMS sending in browser environment');
-        
-        // Make a direct API call to Twilio without using the client
-        try {
-          const accountSid = TWILIO_ACCOUNT_SID;
-          const authToken = TWILIO_AUTH_TOKEN;
-          const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-          
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`)
-            },
-            body: new URLSearchParams({
-              To: formattedPhoneNumber,
-              From: TWILIO_PHONE_NUMBER,
-              Body: messageBody
-            })
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            console.log(`[SMS Service] Message sent successfully via direct API. SID: ${data.sid}`);
-            await logSMSMessage(phoneNumber, messageBody, true);
-            return { 
-              success: true, 
-              message: `SMS sent successfully via direct API. Message SID: ${data.sid}` 
-            };
-          } else {
-            const errorData = await response.json();
-            throw new Error(`Twilio API error: ${errorData.message || 'Unknown error'}`);
-          }
-        } catch (directApiError) {
-          console.error('Direct Twilio API call failed:', directApiError);
-          
-          // Log the simulated message as fallback
-          await logSMSMessage(phoneNumber, messageBody, true);
-          
-          return { 
-            success: true, 
-            message: `SMS simulated successfully in browser environment. Message would be sent to ${formattedPhoneNumber}` 
-          };
-        }
-      }
-      
+      // ALWAYS use direct API approach in browser environments instead of twilioClient
+      // This ensures SMS sending works even without the Node.js Buffer polyfill
       try {
-        const message = await twilioClient.messages.create({
-          body: messageBody,
-          from: TWILIO_PHONE_NUMBER,
-          to: formattedPhoneNumber
+        const accountSid = TWILIO_ACCOUNT_SID;
+        const authToken = TWILIO_AUTH_TOKEN;
+        const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+        
+        console.log('[SMS Service] Using direct Twilio API call');
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`)
+          },
+          body: new URLSearchParams({
+            To: formattedPhoneNumber,
+            From: TWILIO_PHONE_NUMBER,
+            Body: messageBody
+          })
         });
         
-        console.log(`[SMS Service] Message sent successfully. SID: ${message.sid}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`[SMS Service] Message sent successfully via direct API. SID: ${data.sid}`);
+          await logSMSMessage(phoneNumber, messageBody, true);
+          return { 
+            success: true, 
+            message: `SMS sent successfully via direct API. Message SID: ${data.sid}` 
+          };
+        } else {
+          const errorData = await response.json();
+          throw new Error(`Twilio API error: ${errorData.message || JSON.stringify(errorData) || 'Unknown error'}`);
+        }
+      } catch (directApiError) {
+        console.error('Direct Twilio API call failed:', directApiError);
         
-        // Log the message to the SMS logs table
-        await logSMSMessage(phoneNumber, messageBody, true);
+        // Only try the traditional twilioClient as a fallback if it exists
+        if (twilioClient) {
+          try {
+            const message = await twilioClient.messages.create({
+              body: messageBody,
+              from: TWILIO_PHONE_NUMBER,
+              to: formattedPhoneNumber
+            });
+            
+            console.log(`[SMS Service] Message sent successfully via twilioClient. SID: ${message.sid}`);
+            
+            // Log the message to the SMS logs table
+            await logSMSMessage(phoneNumber, messageBody, true);
+            
+            return { 
+              success: true, 
+              message: `SMS sent successfully. Message SID: ${message.sid}` 
+            };
+          } catch (twilioError) {
+            console.error('Twilio API error:', twilioError);
+            
+            // Log the failed message
+            await logSMSMessage(phoneNumber, messageBody, false, String(twilioError));
+            
+            return { 
+              success: false, 
+              message: `Twilio API error: ${twilioError}` 
+            };
+          }
+        }
         
-        return { 
-          success: true, 
-          message: `SMS sent successfully. Message SID: ${message.sid}` 
-        };
-      } catch (twilioError) {
-        console.error('Twilio API error:', twilioError);
-        
-        // Log the failed message
-        await logSMSMessage(phoneNumber, messageBody, false, String(twilioError));
+        // If we get here, both methods failed, but we'll still log the attempt
+        await logSMSMessage(phoneNumber, messageBody, false, String(directApiError));
         
         return { 
           success: false, 
-          message: `Twilio API error: ${twilioError}` 
+          message: `Failed to send SMS: ${directApiError}` 
         };
       }
     } catch (error) {
