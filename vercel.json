@@ -8,6 +8,8 @@
   "github": {
     "silent": true
   },
+  "public": true,
+  "protection": false,
   "routes": [
     {
       "src": "/static/(.*)",
