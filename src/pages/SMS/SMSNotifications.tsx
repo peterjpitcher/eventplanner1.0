@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Customer, Event } from '../../types/database.types';
 import { customerService } from '../../services/customerService';
-import { SMS_TEMPLATES } from '../../services/smsService';
+import { SMS_TEMPLATES, smsService } from '../../services/smsService';
 import { eventService } from '../../services/eventService';
+import { bookingService } from '../../services/bookingService';
 
 const SMSNotifications: React.FC = () => {
   // State for customer selection for individual messages
@@ -31,14 +32,16 @@ const SMSNotifications: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load customers and events in parallel
-      const [customersData, eventsData] = await Promise.all([
+      // Load customers, events and SMS logs in parallel
+      const [customersData, eventsData, smsLogsData] = await Promise.all([
         customerService.getAllCustomers(),
-        eventService.getAllEvents()
+        eventService.getAllEvents(),
+        smsService.getSMSLogs()
       ]);
       
       setCustomers(customersData);
       setEvents(eventsData);
+      setSmsLogs(smsLogsData);
       setError(null);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -77,32 +80,24 @@ const SMSNotifications: React.FC = () => {
         throw new Error('Selected customer not found.');
       }
       
-      // Mock sending message
-      setTimeout(() => {
-        const newLog = {
-          id: String(smsLogs.length + 1),
-          phone_number: customer.mobile_number,
-          message_body: customMessage,
-          success: true,
-          created_at: new Date().toISOString()
-        };
-        
-        setSmsLogs([newLog, ...smsLogs]);
-        
-        setResult({
-          success: true,
-          message: `Message sent to ${customer.first_name} ${customer.last_name} successfully.`
-        });
-        
+      // Send the message using the SMS service
+      const result = await smsService.sendCustomMessage(customer, customMessage);
+      
+      // Refresh the SMS logs after sending
+      const updatedLogs = await smsService.getSMSLogs();
+      setSmsLogs(updatedLogs);
+      
+      setResult(result);
+      if (result.success) {
         setCustomMessage('');
-        setSendingMessage(false);
-      }, 1000);
+      }
     } catch (error) {
       console.error('Error sending custom message:', error);
       setResult({ 
         success: false, 
         message: `Failed to send message: ${error}` 
       });
+    } finally {
       setSendingMessage(false);
     }
   };
@@ -122,37 +117,56 @@ const SMSNotifications: React.FC = () => {
       setSendingReminders(true);
       setResult(null);
       
-      // Mock sending reminders
-      setTimeout(() => {
-        const event = events.find(e => e.id === selectedEventId);
-        const successCount = Math.floor(Math.random() * 5) + 1;
-        const failedCount = Math.floor(Math.random() * 2);
-        
-        // Create new logs for the reminders
-        const newLogs = Array(successCount + failedCount).fill(null).map((_, i) => ({
-          id: String(smsLogs.length + i + 1),
-          phone_number: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-          message_body: SMS_TEMPLATES.EVENT_REMINDER.replace('[CUSTOMER_NAME]', `Customer ${i+1}`).replace('[EVENT_NAME]', event?.name || 'Unknown Event'),
-          success: i < successCount,
-          error_message: i >= successCount ? 'Failed to deliver message' : null,
-          created_at: new Date().toISOString()
-        }));
-        
-        setSmsLogs([...newLogs, ...smsLogs]);
-        
-        setResult({ 
-          success: true, 
-          message: `Reminders sent: ${successCount} successful, ${failedCount} failed.` 
-        });
-        
-        setSendingReminders(false);
-      }, 1500);
+      // Find the selected event
+      const event = events.find(e => e.id === selectedEventId);
+      if (!event) {
+        throw new Error('Selected event not found.');
+      }
+      
+      // Get all bookings for this event
+      const bookings = await bookingService.getBookingsByEvent(event.id);
+      
+      // Send reminders to all customers with bookings
+      let successCount = 0;
+      let failedCount = 0;
+      
+      for (const booking of bookings) {
+        const customer = await customerService.getCustomerById(booking.customer_id);
+        if (customer) {
+          const eventTime = new Date(event.start_time).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          const result = await smsService.sendEventReminder(
+            customer,
+            event.name,
+            eventTime
+          );
+          
+          if (result.success) {
+            successCount++;
+          } else {
+            failedCount++;
+          }
+        }
+      }
+      
+      // Refresh SMS logs
+      const updatedLogs = await smsService.getSMSLogs();
+      setSmsLogs(updatedLogs);
+      
+      setResult({
+        success: true,
+        message: `Reminders sent: ${successCount} successful, ${failedCount} failed.`
+      });
     } catch (error) {
       console.error('Error sending event reminders:', error);
       setResult({ 
         success: false, 
         message: `Failed to send reminders: ${error}` 
       });
+    } finally {
       setSendingReminders(false);
     }
   };

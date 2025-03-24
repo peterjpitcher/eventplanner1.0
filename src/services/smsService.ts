@@ -1,10 +1,23 @@
 import { supabase } from './supabase';
 import { Customer } from '../types/database.types';
+// Import Twilio for SMS functionality
+import twilio from 'twilio';
 
 // This would typically be stored in environment variables
 const TWILIO_ACCOUNT_SID = process.env.REACT_APP_TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.REACT_APP_TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.REACT_APP_TWILIO_PHONE_NUMBER;
+
+// Initialize Twilio client if credentials are available
+let twilioClient: any = null;
+if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+  try {
+    twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    console.log('Twilio client initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize Twilio client:', error);
+  }
+}
 
 // Message templates for different notification types
 export const SMS_TEMPLATES = {
@@ -14,14 +27,62 @@ export const SMS_TEMPLATES = {
   CUSTOM_MESSAGE: '{{customMessage}}'
 };
 
-// Interface for message data
-interface MessageData {
-  customerName: string;
+// Define the data structure for message templates
+export interface MessageData {
+  customerName?: string;
   eventName?: string;
   eventDate?: string;
   eventTime?: string;
   customMessage?: string;
+  [key: string]: string | undefined;
 }
+
+// Format phone number to E.164 format (required by Twilio)
+const formatPhoneNumber = (phoneNumber: string): string => {
+  // Remove any non-digit characters
+  const digitsOnly = phoneNumber.replace(/\D/g, '');
+  
+  // Ensure it has the + prefix and country code (assuming US/Canada if not specified)
+  if (digitsOnly.startsWith('1')) {
+    return `+${digitsOnly}`;
+  } else {
+    return `+1${digitsOnly}`;
+  }
+};
+
+// Replace placeholders in templates with actual data
+const replacePlaceholders = (template: string, data: MessageData): string => {
+  let result = template;
+  
+  // Replace each placeholder with its corresponding value
+  Object.entries(data).forEach(([key, value]) => {
+    if (value) {
+      const placeholder = `{{${key}}}`;
+      result = result.replace(new RegExp(placeholder, 'g'), value);
+    }
+  });
+  
+  return result;
+};
+
+// Log SMS messages to the database
+const logSMSMessage = async (
+  phoneNumber: string, 
+  messageBody: string, 
+  success: boolean,
+  errorMessage?: string
+): Promise<void> => {
+  try {
+    await supabase.from('sms_logs').insert([{
+      phone_number: phoneNumber,
+      message_body: messageBody,
+      success,
+      error_message: errorMessage || null
+    }]);
+  } catch (error) {
+    console.error('Error logging SMS message:', error);
+  }
+};
 
 export const smsService = {
   // Send an SMS using Twilio API
@@ -46,26 +107,27 @@ export const smsService = {
       // Replace template placeholders with actual data
       const messageBody = replacePlaceholders(template, data);
       
-      // In a real implementation, we would call Twilio API here
-      // For now, we'll just log the message and simulate a successful call
-      console.log(`[SMS Service] To: ${formattedPhoneNumber}, Message: ${messageBody}`);
+      console.log(`[SMS Service] Attempting to send SMS to: ${formattedPhoneNumber}, Message: ${messageBody}`);
       
-      // In production, you would use the Twilio API like this:
-      /*
-      const twilio = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-      const message = await twilio.messages.create({
+      // Use the Twilio API to send the message
+      if (!twilioClient) {
+        throw new Error('Twilio client is not initialized');
+      }
+      
+      const message = await twilioClient.messages.create({
         body: messageBody,
         from: TWILIO_PHONE_NUMBER,
         to: formattedPhoneNumber
       });
-      */
+      
+      console.log(`[SMS Service] Message sent successfully. SID: ${message.sid}`);
       
       // Log the message to the SMS logs table
       await logSMSMessage(phoneNumber, messageBody, true);
       
       return { 
         success: true, 
-        message: 'SMS sent successfully.' 
+        message: `SMS sent successfully. Message SID: ${message.sid}` 
       };
     } catch (error) {
       console.error('Error sending SMS:', error);
@@ -144,59 +206,5 @@ export const smsService = {
     }
     
     return data || [];
-  }
-};
-
-// Helper function to format phone number to E.164 format
-const formatPhoneNumber = (phoneNumber: string): string => {
-  // Remove any non-numeric characters
-  const cleaned = phoneNumber.replace(/\D/g, '');
-  
-  // Check if the number already has a country code
-  if (cleaned.startsWith('1')) {
-    return `+${cleaned}`;
-  }
-  
-  // Assume US number and add +1 prefix if not present
-  return `+1${cleaned}`;
-};
-
-// Helper function to replace placeholders in templates
-const replacePlaceholders = (template: string, data: MessageData): string => {
-  let message = template;
-  
-  // Replace all placeholders with corresponding data
-  Object.entries(data).forEach(([key, value]) => {
-    if (value) {
-      const regex = new RegExp(`{{${key}}}`, 'g');
-      message = message.replace(regex, value);
-    }
-  });
-  
-  return message;
-};
-
-// Log SMS messages to the database
-const logSMSMessage = async (
-  phoneNumber: string, 
-  message: string, 
-  success: boolean,
-  error?: string
-) => {
-  try {
-    const { error: dbError } = await supabase
-      .from('sms_logs')
-      .insert({
-        phone_number: phoneNumber,
-        message_body: message,
-        success,
-        error_message: error || null
-      });
-    
-    if (dbError) {
-      console.error('Error logging SMS message:', dbError);
-    }
-  } catch (err) {
-    console.error('Error logging SMS message:', err);
   }
 }; 
