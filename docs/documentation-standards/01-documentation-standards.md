@@ -65,6 +65,9 @@ This section defines the standards and best practices for creating and maintaini
    - Validate configuration examples
    - Test documented procedures
    - Ensure all links work
+   - Check both internal cross-references and external links
+   - Verify that Markdown links use correct paths relative to the document location
+   - Test navigation between documentation files through links
 
 9. **Documentation Integration**
    - Update related documents

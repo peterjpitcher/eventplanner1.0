@@ -50,12 +50,12 @@ Welcome to the Event Management System documentation. This index serves as a cen
 - [Customer Management](../components/03-customer-management.md) - Documentation for customer features
 - [Event Management](../components/04-event-management.md) - Documentation for event features
 - [Booking System](../components/05-booking-system.md) - Documentation for booking features
-- [SMS Notifications](../components/06-sms-notifications.md) - Documentation for SMS features
+- [SMS Notifications](../api/01-sms-notifications.md) - Documentation for SMS features including UK phone number formats
 
 ## 🔄 Integration Documentation
 
 - [Supabase Integration](../database/06-supabase-integration.md) - Guide to Supabase integration
-- [Twilio SMS Integration](../components/07-twilio-integration.md) - Guide to Twilio SMS integration
+- [Twilio SMS Integration](../api/01-sms-notifications.md) - Guide to Twilio SMS integration and UK phone number formatting
 
 ## 🛠️ Templates
 
