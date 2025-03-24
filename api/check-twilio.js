@@ -1,5 +1,6 @@
 // Serverless function for checking Twilio API connectivity
-export default async function handler(req, res) {
+// For Vercel serverless functions
+module.exports = async (req, res) => {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -9,6 +10,10 @@ export default async function handler(req, res) {
     // Get Twilio credentials from environment variables
     const accountSid = process.env.REACT_APP_TWILIO_ACCOUNT_SID;
     const authToken = process.env.REACT_APP_TWILIO_AUTH_TOKEN;
+
+    console.log('[API] Checking Twilio credentials');
+    console.log(`[API] Account SID present: ${!!accountSid}`);
+    console.log(`[API] Auth Token present: ${!!authToken}`);
 
     // Make sure we have all required credentials
     if (!accountSid || !authToken) {
@@ -33,34 +38,41 @@ export default async function handler(req, res) {
       }
     );
 
+    // Get the raw response text for debugging
+    const responseText = await twilioResponse.text();
+    console.log(`[API] Twilio API response status: ${twilioResponse.status}`);
+    
+    // Try to parse as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('[API] Failed to parse Twilio response as JSON:', responseText);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to parse Twilio response: ${responseText.substring(0, 100)}...`,
+        status: twilioResponse.status
+      });
+    }
+
     // Check if the request was successful
     if (twilioResponse.ok) {
-      const data = await twilioResponse.json();
-      console.log(`[API] Twilio connectivity verified. Found ${data.messages.length} messages.`);
+      console.log(`[API] Twilio connectivity verified. Found ${data.messages?.length || 0} messages.`);
       
       // Return success response
       return res.status(200).json({
         success: true,
         message: 'Twilio API connection verified successfully.',
-        count: data.messages.length
+        count: data.messages?.length || 0
       });
     } else {
-      // Try to parse the error response
-      let errorData = {};
-      try {
-        errorData = await twilioResponse.json();
-      } catch (e) {
-        // If we can't parse the response, just use the status text
-        errorData = { message: twilioResponse.statusText };
-      }
-      
-      console.error(`[API] Twilio API connection error:`, errorData);
+      console.error(`[API] Twilio API connection error:`, data);
       
       return res.status(twilioResponse.status).json({
         success: false,
-        message: `Twilio API connection error: ${errorData.message || 'Unknown error'}`,
+        message: `Twilio API connection error: ${data.message || data.code || 'Unknown error'}`,
         status: twilioResponse.status,
-        twilioError: errorData
+        twilioError: data
       });
     }
   } catch (error) {

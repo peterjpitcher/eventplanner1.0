@@ -1,5 +1,6 @@
 // Serverless function for securely sending SMS via Twilio
-export default async function handler(req, res) {
+// For Vercel serverless functions
+module.exports = async (req, res) => {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -55,8 +56,21 @@ export default async function handler(req, res) {
       }
     );
 
-    // Parse the Twilio response
-    const responseData = await twilioResponse.json();
+    // Get the response text
+    const responseText = await twilioResponse.text();
+    
+    // Try to parse as JSON
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('[API] Failed to parse Twilio response as JSON:', responseText);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to parse Twilio response: ${responseText.substring(0, 100)}...`,
+        twilioStatus: twilioResponse.status
+      });
+    }
 
     // Check if the request was successful
     if (twilioResponse.ok) {
@@ -74,7 +88,7 @@ export default async function handler(req, res) {
       
       return res.status(twilioResponse.status).json({
         success: false,
-        message: `Twilio API error: ${responseData.message || 'Unknown error'}`,
+        message: `Twilio API error: ${responseData.message || responseData.code || 'Unknown error'}`,
         code: responseData.code,
         twilioError: responseData
       });

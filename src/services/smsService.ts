@@ -118,9 +118,26 @@ export const smsService = {
   forceSMSProductionMode: (): Promise<boolean> => {
     return new Promise(async (resolve) => {
       try {
+        console.log('[SMS Service] Checking Twilio API connection via server API');
+        
         // Use the server-side API to check Twilio connectivity
         const response = await fetch('/api/check-twilio');
-        const data = await response.json();
+        
+        // Get response text first for better error handling
+        const responseText = await response.text();
+        let data;
+        
+        try {
+          // Try to parse as JSON if possible
+          data = JSON.parse(responseText);
+        } catch (e) {
+          console.error('[SMS Service] Failed to parse API response:', responseText);
+          console.error('Error:', e);
+          resolve(false);
+          return;
+        }
+        
+        console.log('[SMS Service] Check Twilio API response:', data);
         
         if (response.ok && data.success) {
           console.log('Twilio API connection verified via server-side API');
@@ -175,7 +192,17 @@ export const smsService = {
           })
         });
         
-        const responseData = await response.json();
+        // Get response text first for better error handling
+        const responseText = await response.text();
+        let responseData;
+        
+        try {
+          // Try to parse as JSON if possible
+          responseData = JSON.parse(responseText);
+        } catch (e) {
+          console.error('[SMS Service] Failed to parse API response:', responseText);
+          throw new Error(`API returned invalid JSON: ${responseText.substring(0, 100)}...`);
+        }
         
         // Log response status for debugging
         console.log(`[SMS Service] API response status: ${response.status}`, responseData);
