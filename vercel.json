@@ -3,10 +3,19 @@
   "buildCommand": "npm install && npm run build:vercel",
   "outputDirectory": "build",
   "env": {
-    "NODE_OPTIONS": "--max-old-space-size=4096"
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "REACT_APP_SUPABASE_URL": "https://fgjghwebckvravopqdho.supabase.co",
+    "REACT_APP_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnamdod2ViY2t2cmF2b3BxZGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4MjA1MjgsImV4cCI6MjA1ODM5NjUyOH0.edn23aNzEoXpIGWtxyL8ABA2uSafa1s0EMarV0lALyY"
+  },
+  "build": {
+    "env": {
+      "REACT_APP_SUPABASE_URL": "https://fgjghwebckvravopqdho.supabase.co",
+      "REACT_APP_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnamdod2ViY2t2cmF2b3BxZGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI4MjA1MjgsImV4cCI6MjA1ODM5NjUyOH0.edn23aNzEoXpIGWtxyL8ABA2uSafa1s0EMarV0lALyY"
+    }
   },
   "github": {
-    "silent": true
+    "silent": true,
+    "enabled": false
   },
   "public": true,
   "routes": [
