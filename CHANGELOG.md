@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2025-03-24
+
+### Added
+- Enhanced DatabaseInitializer with detailed permission checking and better error reporting
+- Added comprehensive UI consistency across all components
+
+### Changed
+- Improved form submission flow for better user experience
+- Updated EventCategoryForm to use the eventCategoryService instead of mock data
+- Modified redirect behavior after form submissions to return to list pages
+
+### Fixed
+- Fixed navigation issues after creating new customers, events, and bookings
+- Fixed inconsistent UI in CustomerDetails component
+- Added proper ESLint disable comments to suppress warnings while maintaining code functionality
+
 ## [1.1.0] - 2025-03-24
 
 ### Added

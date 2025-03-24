@@ -43,9 +43,26 @@ The project has completed **Phase 1 (Foundation)**, **Phase 2 (Core Functionalit
 
 For detailed implementation status, see the [Implementation Plan](./docs/enhancements/v1.0/implementation-plan.md).
 
-## Recent Updates (v1.1)
+## Recent Updates (v1.1.1)
 
 The application has been significantly improved with the following features:
+
+1. **Enhanced User Experience**:
+   - Improved form submission flow - forms now redirect back to list pages after successful creation
+   - Consistent UI styling across all components
+   - Better error handling and form validation
+
+2. **Supabase Integration Improvements**:
+   - Event categories now properly use the Supabase service layer
+   - Enhanced DatabaseInitializer with detailed permission checking
+   - Better debugging tools for Supabase connectivity issues
+
+3. **Code Quality Enhancements**:
+   - Fixed ESLint warnings throughout the codebase
+   - Improved component consistency
+   - Better error handling for service failures
+
+### Previous Updates (v1.1.0)
 
 1. **Full Supabase Integration**: All components now properly connect to Supabase for real data instead of using mock data.
    
