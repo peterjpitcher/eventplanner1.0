@@ -2,51 +2,79 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.1.1] - 2025-03-24
+## [1.2.0] - 2025-03-24
 
 ### Added
-- Enhanced DatabaseInitializer with detailed permission checking and better error reporting
-- Added comprehensive UI consistency across all components
+- UK phone number formatting support
+- Detailed schema documentation 
+- New SMS notification documentation
 
 ### Changed
-- Improved form submission flow for better user experience
-- Updated EventCategoryForm to use the eventCategoryService instead of mock data
-- Modified redirect behavior after form submissions to return to list pages
+- Phone numbers now stored in UK format (07XXX XXX XXX)
+- Twilio integration updated to convert UK numbers to international format
+- Updated validation rules for UK mobile numbers
+- Improved product requirements documentation
 
 ### Fixed
-- Fixed navigation issues after creating new customers, events, and bookings
-- Fixed inconsistent UI in CustomerDetails component
-- Added proper ESLint disable comments to suppress warnings while maintaining code functionality
+- Removed Supabase Data Initializer from production builds
+- Fixed phone number formatting in SMS services
+- Fixed 404 error in production deployment
 
-## [1.1.0] - 2025-03-24
+## [1.1.2] - 2025-03-24
 
 ### Added
-- Full integration with Supabase for all components
-- Fixed database schema to include attendees field in bookings table
-- Enhanced error handling throughout the application
+- Vercel production deployment
+- Fixed configuration in vercel.json
+- Environment variables properly set up in Vercel
 
 ### Changed
-- Modified Dashboard component to use real data from services
-- Updated CustomerList component to use real customer data
-- Updated BookingList component to use real booking data
-- Updated SMSNotifications component to use real customer and event data
-- Replaced hardcoded mock data with service calls throughout the application
+- Updated build pipeline for production
+- Improved error handling across components
 
 ### Fixed
-- Fixed TypeScript errors related to spread operator in Dashboard.tsx
-- Fixed missing sendBulkSMS method in SMSNotifications.tsx
-- Fixed issue with customers not having email field
-- Fixed database schema discrepancies
-- Ensured all bookings have the attendees field populated
+- Fixed Twilio configuration issues
+- Updated environment variable handling
+
+## [1.1.1] - 2025-03-23
+
+### Added
+- Enhanced database schema check
+- Improved Supabase connectivity checks
+- Better form validation throughout the application
+
+### Changed
+- Improved form submission flow
+- Consistent UI styling across all components
+
+### Fixed
+- Fixed ESLint warnings throughout the codebase
+- Fixed Component consistency
+- Better error handling for service failures
+
+## [1.1.0] - 2025-03-22
+
+### Added
+- Full Supabase integration for all components
+- Enhanced database schema with correct fields
+- Data layer architecture with proper service separation
+
+### Changed
+- Improved service layer with graceful fallback to mock data
+- Enhanced UI for better user experience
+
+### Fixed
+- Fixed missing `attendees` field in database schema
+- Fixed TypeScript errors in components
+- Improved error handling
 
 ## [1.0.0] - 2025-03-20
 
 ### Added
-- Initial release with mock data functionality
-- Customer management system
-- Event management system
-- Booking system with capacity control
-- Event categories management
-- SMS notification system
-- Dashboard with key metrics
-- Debug tools for database initialization 
+- Initial release with core functionality
+- Customer management
+- Event category management
+- Event management
+- Booking system
+- Basic SMS notification
+- Dashboard with overview
+- Mock data system for development 

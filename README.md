@@ -44,10 +44,29 @@ The project has completed **Phase 1 (Foundation)**, **Phase 2 (Core Functionalit
 
 For detailed implementation status, see the [Implementation Plan](./docs/enhancements/v1.0/implementation-plan.md).
 
-## Recent Updates (v1.1.2)
+## Recent Updates (v1.2.0)
+
+The application has been updated with improvements to phone number handling for UK users:
+
+1. **UK Phone Number Format**:
+   - Customer phone numbers are now stored in UK format (07XXX XXX XXX)
+   - Phone number validation has been updated to enforce UK mobile number format
+   - Automatic conversion to international format (+44XXXXXXXXX) when sending SMS via Twilio
+   - Documentation updated to reflect the UK-specific requirements
+
+2. **Supabase Data Initializer**:
+   - Removed from production environment for a cleaner user interface
+   - Still available in development for testing and database population
+
+3. **Documentation Improvements**:
+   - Added detailed schema documentation
+   - Enhanced deployment instructions
+   - Updated product requirements to include UK phone number specifications
+
+### Previous Updates (v1.1.2)
 
 The application has been successfully deployed to Vercel and is now live at:
-[https://eventplanner1-0-mvwvfanvh-peter-pitchers-projects.vercel.app](https://eventplanner1-0-mvwvfanvh-peter-pitchers-projects.vercel.app)
+[https://eventplanner1-0.vercel.app](https://eventplanner1-0.vercel.app)
 
 Key improvements:
 

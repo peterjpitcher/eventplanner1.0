@@ -18,7 +18,6 @@ import BookingDetails from './pages/Bookings/BookingDetails';
 import BookingNew from './pages/Bookings/BookingNew';
 import BookingEdit from './pages/Bookings/BookingEdit';
 import SMSNotifications from './pages/SMS/SMSNotifications';
-import DatabaseInitializer from './components/Debug/DatabaseInitializer';
 
 // Import global styles
 import './index.css';
@@ -65,7 +64,6 @@ function App() {
           <Route path="/sms-notifications" element={<SMSNotifications />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        <DatabaseInitializer />
       </Layout>
     </Router>
   );

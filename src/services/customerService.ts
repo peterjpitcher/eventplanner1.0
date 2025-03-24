@@ -21,11 +21,15 @@ class MockCustomerData {
     
     for (let i = 0; i < 15; i++) {
       const id = this.nextId++;
+      
+      // Generate UK format mobile number (07XXX XXX XXX)
+      const randomMobile = `07${Math.floor(Math.random() * 900000000 + 100000000)}`;
+      
       this.customers.push({
         id: id.toString(),
         first_name: firstNames[i % firstNames.length],
         last_name: lastNames[i % lastNames.length],
-        mobile_number: `+1${Math.floor(Math.random() * 1000000000 + 1000000000)}`,
+        mobile_number: randomMobile,
         notes: i % 3 === 0 ? 'VIP customer' : i % 3 === 1 ? 'Prefers email contact' : '',
         created_at: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toISOString()
       });

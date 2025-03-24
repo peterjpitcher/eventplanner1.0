@@ -39,10 +39,13 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ initialData = {}, isEdit = 
       return false;
     }
     
-    // Basic phone number validation
-    const phoneRegex = /^\+?[0-9]{10,15}$/;
-    if (!phoneRegex.test(formData.mobile_number.replace(/\s/g, ''))) {
-      setError('Please enter a valid mobile number');
+    // UK phone number validation
+    // Allow formats like: 07123456789, 07123 456 789, +447123456789
+    const cleanedNumber = formData.mobile_number.replace(/\s/g, '');
+    const ukMobileRegex = /^(07\d{9}|\+447\d{9})$/;
+    
+    if (!ukMobileRegex.test(cleanedNumber)) {
+      setError('Please enter a valid UK mobile number (starting with 07)');
       return false;
     }
     
@@ -240,7 +243,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ initialData = {}, isEdit = 
             disabled={loading}
             required
           />
-          <p style={helperTextStyle}>Format: +1234567890 or 1234567890</p>
+          <p style={helperTextStyle}>Format: 07XXX XXX XXX (UK mobile number)</p>
         </div>
         
         <div style={{...formGroupStyle, marginBottom: '1.5rem'}}>

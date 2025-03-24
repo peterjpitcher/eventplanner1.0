@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { supabase, isMockMode } from '../../services/supabase';
 
 const DatabaseInitializer: React.FC = () => {
+  // Don't render in production environments or when using mock data
+  if (process.env.NODE_ENV === 'production' || isMockMode) {
+    return null;
+  }
+  
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string>('');
   
@@ -355,11 +360,6 @@ const DatabaseInitializer: React.FC = () => {
       setLoading(false);
     }
   };
-  
-  // Only show in production mode and when not using mock data
-  if (isMockMode) {
-    return null;
-  }
   
   return (
     <div style={containerStyle}>

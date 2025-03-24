@@ -18,12 +18,15 @@ const CustomerEdit: React.FC = () => {
         // Create mock data for development
         setTimeout(() => {
           if (id) {
+            // Generate UK format mobile number (07XXX XXX XXX)
+            const randomMobile = `07${Math.floor(Math.random() * 900000000 + 100000000)}`;
+            
             // Create mock customer data if not passed
             setCustomer({
               id: id,
               first_name: `First${id}`,
               last_name: `Last${id}`,
-              mobile_number: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+              mobile_number: randomMobile,
               notes: `Notes for customer ${id}`,
               created_at: new Date().toISOString()
             });

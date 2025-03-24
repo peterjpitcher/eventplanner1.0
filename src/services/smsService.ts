@@ -55,17 +55,24 @@ export interface MessageData {
   [key: string]: string | undefined;
 }
 
-// Format phone number to E.164 format (required by Twilio)
+// Format UK phone number to E.164 format (required by Twilio)
 const formatPhoneNumber = (phoneNumber: string): string => {
+  // If the phone number already starts with +, return it as is
+  if (phoneNumber.startsWith('+')) {
+    return phoneNumber;
+  }
+  
   // Remove any non-digit characters
   const digitsOnly = phoneNumber.replace(/\D/g, '');
   
-  // Ensure it has the + prefix and country code (assuming US/Canada if not specified)
-  if (digitsOnly.startsWith('1')) {
-    return `+${digitsOnly}`;
-  } else {
-    return `+1${digitsOnly}`;
-  }
+  // Handle UK numbers (stored as 07XXXXXXXXX)
+  if (digitsOnly.startsWith('07') && (digitsOnly.length === 11)) {
+    // Convert UK mobile format (07XXXXXXXXX) to international format (+44XXXXXXXXX)
+    return `+44${digitsOnly.substring(1)}`;
+  } 
+  
+  // If for some reason we get a different format, use it as is with + prefix
+  return `+${digitsOnly}`;
 };
 
 // Replace placeholders in templates with actual data
@@ -105,7 +112,8 @@ const logSMSMessage = async (
 export const smsService = {
   // Check if Twilio is properly configured
   isTwilioConfigured: (): boolean => {
-    return !!twilioClient;
+    // Check both environment variables and client
+    return !!TWILIO_ACCOUNT_SID && !!TWILIO_AUTH_TOKEN && !!TWILIO_PHONE_NUMBER;
   },
   
   // Send an SMS using Twilio API

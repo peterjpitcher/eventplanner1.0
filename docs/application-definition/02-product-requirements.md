@@ -18,11 +18,15 @@ A simple, efficient web application for managing pub events, customer registrati
 - **Customer Registration**
   - First name
   - Last name
-  - Mobile number
+  - Mobile number (UK format: 07XXX XXX XXX)
   - Optional notes field
 - **Customer List View**
   - Search functionality
   - Quick access to customer details and booking history
+- **Phone Number Requirements**
+  - UK mobile numbers must be stored in local format (07XXX XXX XXX)
+  - Numbers are converted to international format (+44XXXXXXXXX) when sending SMS via Twilio
+  - Validation ensures only valid UK mobile numbers are accepted
 
 #### 3.2 Event Management
 - **Event Category Management**

@@ -151,11 +151,47 @@ If you're having trouble connecting to Supabase:
 The application uses the following tables in Supabase:
 
 - `customers` - Customer information
+  - Stores customer details including name and UK mobile number in 07XXX XXX XXX format
 - `event_categories` - Event category information
 - `events` - Event information
 - `bookings` - Booking information
+- `sms_logs` - Records of SMS messages sent through the system
 
 See the [Database Documentation](./05-database-overview.md) for detailed schema information.
+
+## Data Handling for UK Phone Numbers
+
+The application is designed to work with UK mobile phone numbers:
+
+### Storage Format
+- UK mobile numbers are stored in local format (07XXX XXX XXX)
+- This format is enforced through validation in the CustomerForm component
+- The validation uses a regex pattern: `/^(07\d{9}|\+447\d{9})$/`
+
+### SMS Integration
+- When sending SMS messages via Twilio, the phone numbers are automatically converted to international format
+- The `formatPhoneNumber` function in `smsService.ts` handles this conversion:
+  ```typescript
+  // Format UK phone number to E.164 format (required by Twilio)
+  const formatPhoneNumber = (phoneNumber: string): string => {
+    // If the phone number already starts with +, return it as is
+    if (phoneNumber.startsWith('+')) {
+      return phoneNumber;
+    }
+    
+    // Remove any non-digit characters
+    const digitsOnly = phoneNumber.replace(/\D/g, '');
+    
+    // Handle UK numbers (stored as 07XXXXXXXXX)
+    if (digitsOnly.startsWith('07') && (digitsOnly.length === 11)) {
+      // Convert UK mobile format (07XXXXXXXXX) to international format (+44XXXXXXXXX)
+      return `+44${digitsOnly.substring(1)}`;
+    } 
+    
+    // If for some reason we get a different format, use it as is with + prefix
+    return `+${digitsOnly}`;
+  };
+  ```
 
 ## Supabase Features Used
 
