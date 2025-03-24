@@ -177,14 +177,21 @@ const SMSNotifications: React.FC = () => {
   
   const handleForceProductionMode = () => {
     try {
+      const accountSid = process.env.REACT_APP_TWILIO_ACCOUNT_SID || '';
+      const authToken = process.env.REACT_APP_TWILIO_AUTH_TOKEN || '';
+      
+      // Log the first few characters of credentials to debug (don't log full credentials)
+      console.log(`Checking Twilio credentials - SID: ${accountSid.substring(0, 4)}... Auth: ${authToken.substring(0, 4)}...`);
+      
       // Perform a test API call directly to Twilio to verify connectivity
-      fetch(`https://api.twilio.com/2010-04-01/Accounts/${process.env.REACT_APP_TWILIO_ACCOUNT_SID}/Messages.json`, {
+      fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
         method: 'GET',
         headers: {
-          'Authorization': 'Basic ' + btoa(`${process.env.REACT_APP_TWILIO_ACCOUNT_SID}:${process.env.REACT_APP_TWILIO_AUTH_TOKEN}`)
+          'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`)
         }
       })
       .then(response => {
+        console.log('Twilio API response status:', response.status);
         if (response.ok) {
           setTwilioForced(true);
           setResult({
@@ -192,7 +199,9 @@ const SMSNotifications: React.FC = () => {
             message: 'Twilio API connection verified. SMS messages will now be sent using direct API calls.'
           });
         } else {
-          throw new Error(`API returned ${response.status} ${response.statusText}`);
+          return response.json().then(data => {
+            throw new Error(`API returned ${response.status}: ${JSON.stringify(data)}`);
+          });
         }
       })
       .catch(error => {

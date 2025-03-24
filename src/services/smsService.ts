@@ -157,24 +157,31 @@ export const smsService = {
       // ALWAYS use direct API approach in browser environments instead of twilioClient
       // This ensures SMS sending works even without the Node.js Buffer polyfill
       try {
-        const accountSid = TWILIO_ACCOUNT_SID;
-        const authToken = TWILIO_AUTH_TOKEN;
-        const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+        const accountSid = TWILIO_ACCOUNT_SID || '';
+        const authToken = TWILIO_AUTH_TOKEN || '';
+        const fromNumber = TWILIO_PHONE_NUMBER || '';
         
-        console.log('[SMS Service] Using direct Twilio API call');
+        console.log(`[SMS Service] Using direct Twilio API call to ${formattedPhoneNumber}`);
+        console.log(`[SMS Service] Credentials check - SID: ${accountSid.substring(0, 4)}... Auth: ${authToken.substring(0, 4)}...`);
         
-        const response = await fetch(url, {
+        // Create Authorization header with base64 encoded credentials
+        const authString = btoa(`${accountSid}:${authToken}`);
+        
+        const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`)
+            'Authorization': `Basic ${authString}`
           },
           body: new URLSearchParams({
             To: formattedPhoneNumber,
-            From: TWILIO_PHONE_NUMBER,
+            From: fromNumber,
             Body: messageBody
           })
         });
+        
+        // Log response status for debugging
+        console.log(`[SMS Service] Twilio API response status: ${response.status}`);
         
         if (response.ok) {
           const data = await response.json();
