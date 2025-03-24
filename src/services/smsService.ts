@@ -110,47 +110,8 @@ const logSMSMessage = async (
 export const smsService = {
   // Check if Twilio is properly configured
   isTwilioConfigured: (): boolean => {
-    // Check both environment variables and client
+    // Check environment variables
     return !!TWILIO_ACCOUNT_SID && !!TWILIO_AUTH_TOKEN && !!TWILIO_PHONE_NUMBER;
-  },
-  
-  // Force SMS to be sent in production mode (no simulation)
-  forceSMSProductionMode: (): Promise<boolean> => {
-    return new Promise(async (resolve) => {
-      try {
-        console.log('[SMS Service] Checking Twilio API connection via server API');
-        
-        // Use the server-side API to check Twilio connectivity
-        const response = await fetch('/api/check-twilio');
-        
-        // Get response text first for better error handling
-        const responseText = await response.text();
-        let data;
-        
-        try {
-          // Try to parse as JSON if possible
-          data = JSON.parse(responseText);
-        } catch (e) {
-          console.error('[SMS Service] Failed to parse API response:', responseText);
-          console.error('Error:', e);
-          resolve(false);
-          return;
-        }
-        
-        console.log('[SMS Service] Check Twilio API response:', data);
-        
-        if (response.ok && data.success) {
-          console.log('Twilio API connection verified via server-side API');
-          resolve(true);
-        } else {
-          console.error('Failed to verify Twilio API connection:', data.message);
-          resolve(false);
-        }
-      } catch (error) {
-        console.error('Error checking Twilio API connection:', error);
-        resolve(false);
-      }
-    });
   },
   
   // Send an SMS using Twilio API
@@ -175,12 +136,10 @@ export const smsService = {
       // Replace template placeholders with actual data
       const messageBody = replacePlaceholders(template, data);
       
-      console.log(`[SMS Service] Attempting to send SMS to: ${formattedPhoneNumber}, Message: ${messageBody}`);
+      console.log(`[SMS Service] Attempting to send SMS to: ${formattedPhoneNumber}`);
       
-      // Use the server-side API endpoint instead of direct Twilio API call
+      // Use the server-side API endpoint
       try {
-        console.log('[SMS Service] Using server-side API endpoint');
-        
         const response = await fetch('/api/send-sms', {
           method: 'POST',
           headers: {
@@ -204,11 +163,8 @@ export const smsService = {
           throw new Error(`API returned invalid JSON: ${responseText.substring(0, 100)}...`);
         }
         
-        // Log response status for debugging
-        console.log(`[SMS Service] API response status: ${response.status}`, responseData);
-        
         if (response.ok && responseData.success) {
-          console.log(`[SMS Service] Message sent successfully via API. SID: ${responseData.sid}`);
+          // Log the successful message to the SMS logs table
           await logSMSMessage(phoneNumber, messageBody, true);
           return { 
             success: true, 

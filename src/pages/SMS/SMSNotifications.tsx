@@ -24,7 +24,6 @@ const SMSNotifications: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
   const [isTwilioConfigured, setIsTwilioConfigured] = useState<boolean>(false);
-  const [twilioForced, setTwilioForced] = useState<boolean>(false);
   
   useEffect(() => {
     loadData();
@@ -173,36 +172,6 @@ const SMSNotifications: React.FC = () => {
     } finally {
       setSendingReminders(false);
     }
-  };
-  
-  const handleForceProductionMode = () => {
-    setResult({
-      success: true,
-      message: 'Verifying Twilio API connection...'
-    });
-    
-    smsService.forceSMSProductionMode()
-      .then((success) => {
-        setTwilioForced(success);
-        if (success) {
-          setResult({
-            success: true,
-            message: 'Twilio API connection verified. SMS messages will now be sent using server-side API calls.'
-          });
-        } else {
-          setResult({
-            success: false,
-            message: 'Failed to verify Twilio API connection. Check server logs for details.'
-          });
-        }
-      })
-      .catch(error => {
-        console.error('Error verifying Twilio connection:', error);
-        setResult({
-          success: false,
-          message: `Error verifying Twilio connection: ${error.message}`
-        });
-      });
   };
   
   const formatDateTime = (dateString: string) => {
@@ -410,30 +379,16 @@ const SMSNotifications: React.FC = () => {
     <div style={pageStyle}>
       <h1 style={headerStyle}>SMS Notifications</h1>
       
-      {/* SMS Service Configuration Info */}
-      <div className="alert alert-info mt-3">
-        <h4>SMS Service Configuration</h4>
-        <p>
-          {isTwilioConfigured ? 
-            "Twilio credentials are configured. SMS messages can be sent to real phone numbers." :
-            "The SMS service is currently in simulation mode because Twilio is not properly configured."}
-        </p>
-        {!isTwilioConfigured && (
+      {/* SMS Service Information */}
+      {!isTwilioConfigured && (
+        <div className="alert alert-info mt-3">
+          <h4>SMS Service Information</h4>
           <p>
-            Messages will be logged but may not actually be sent to recipients.
+            The SMS service is configured to use UK phone numbers (format: 07XXX XXX XXX).
+            Messages are processed through a secure server-side API that handles proper authentication.
           </p>
-        )}
-        <button 
-          className={`btn ${twilioForced ? 'btn-success' : 'btn-primary'} mt-2`}
-          onClick={handleForceProductionMode}
-          disabled={twilioForced}
-        >
-          {twilioForced ? 'API Mode Enabled' : 'Enable API Mode'}
-        </button>
-        <p className="mt-2 text-muted small">
-          This uses a secure server-side API to send SMS messages, avoiding browser security limitations.
-        </p>
-      </div>
+        </div>
+      )}
       
       {/* Display notification templates */}
       <div style={cardStyle}>
