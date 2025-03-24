@@ -60,23 +60,19 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ initialData = {}, isEdit = 
       setLoading(true);
       setError(null);
       
-      // For development, mock the API calls
-      setTimeout(() => {
-        if (isEdit && id) {
-          // Mock update
-          console.log('Customer updated:', { id, ...formData });
-          navigate(`/customers/${id}`);
-        } else {
-          // Mock create
-          const newId = Math.floor(Math.random() * 1000).toString();
-          console.log('Customer created:', { id: newId, ...formData });
-          navigate(`/customers/${newId}`);
-        }
-        setLoading(false);
-      }, 800);
+      if (isEdit && id) {
+        // Update existing customer
+        await customerService.updateCustomer(id, formData);
+        navigate(`/customers/${id}`);
+      } else {
+        // Create new customer
+        const newCustomer = await customerService.createCustomer(formData);
+        navigate('/customers');
+      }
     } catch (err) {
       console.error('Error saving customer:', err);
       setError('Failed to save customer. Please try again.');
+    } finally {
       setLoading(false);
     }
   };

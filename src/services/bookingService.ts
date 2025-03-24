@@ -1,7 +1,6 @@
 import { supabase, isMockMode } from './supabase';
 import { Booking, Customer, Event } from '../types/database.types';
 import { smsService } from './smsService';
-import { customerService } from './customerService';
 import { eventService } from './eventService';
 
 // Mock data handler for development without Supabase connection

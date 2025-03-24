@@ -63,27 +63,29 @@ const EventCategoryForm: React.FC<EventCategoryFormProps> = ({ initialData = {},
       default_capacity: parseInt(formData.default_capacity),
     };
     
+    console.log('Attempting to save category:', categoryData);
+    
     try {
       setLoading(true);
       setError(null);
       
-      // For development, mock the API calls
-      setTimeout(() => {
-        if (isEdit && id) {
-          // Mock update
-          console.log('Category updated:', { id, ...categoryData });
-          navigate('/event-categories');
-        } else {
-          // Mock create
-          const newId = Math.floor(Math.random() * 1000).toString();
-          console.log('Category created:', { id: newId, ...categoryData });
-          navigate('/event-categories');
-        }
-        setLoading(false);
-      }, 800);
+      if (isEdit && id) {
+        console.log('Updating existing category with ID:', id);
+        // Update existing category using the service
+        const updated = await eventCategoryService.updateCategory(id, categoryData);
+        console.log('Category updated successfully:', updated);
+        navigate('/event-categories');
+      } else {
+        console.log('Creating new category');
+        // Create new category using the service
+        const created = await eventCategoryService.createCategory(categoryData);
+        console.log('Category created successfully:', created);
+        navigate('/event-categories');
+      }
     } catch (err) {
       console.error('Error saving category:', err);
       setError('Failed to save category. Please try again.');
+    } finally {
       setLoading(false);
     }
   };

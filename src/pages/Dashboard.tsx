@@ -4,7 +4,7 @@ import { customerService } from '../services/customerService';
 import { eventService } from '../services/eventService';
 import { bookingService } from '../services/bookingService';
 import { eventCategoryService } from '../services/eventCategoryService';
-import { Customer, Event, Booking, EventCategory } from '../types/database.types';
+import { Event, Booking } from '../types/database.types';
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState({

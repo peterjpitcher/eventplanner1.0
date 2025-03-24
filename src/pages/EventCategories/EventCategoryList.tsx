@@ -16,16 +16,9 @@ const EventCategoryList: React.FC = () => {
     try {
       setLoading(true);
       
-      // Create mock data for development
-      const mockCategories = Array(8).fill(null).map((_, i) => ({
-        id: String(i + 1),
-        name: `Category ${i + 1}`,
-        default_capacity: 50 + (i * 10),
-        default_start_time: i % 2 === 0 ? '09:00' : '14:00',
-        created_at: new Date().toISOString()
-      }));
-      
-      setCategories(mockCategories);
+      // Use the service to get real data from Supabase
+      const data = await eventCategoryService.getAllCategories();
+      setCategories(data);
       setError(null);
     } catch (err) {
       console.error('Error loading categories:', err);
@@ -38,9 +31,9 @@ const EventCategoryList: React.FC = () => {
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete the category "${name}"?`)) {
       try {
-        // In a real app, this would call an API
-        // await eventCategoryService.deleteCategory(id);
-        // For now, filter out the deleted category
+        // Call the service to delete from Supabase
+        await eventCategoryService.deleteCategory(id);
+        // Update the local state
         setCategories(categories.filter(category => category.id !== id));
       } catch (err) {
         console.error('Error deleting category:', err);

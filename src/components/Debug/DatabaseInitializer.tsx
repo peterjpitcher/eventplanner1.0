@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase, isMockMode, supabaseStatus } from '../../services/supabase';
+import { supabase, isMockMode } from '../../services/supabase';
 
 const DatabaseInitializer: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -250,25 +250,107 @@ const DatabaseInitializer: React.FC = () => {
       setLoading(true);
       setResult('');
       
-      // Test each table
-      const tables = ['customers', 'event_categories', 'events', 'bookings'];
-      const results = [];
+      // Step 1: Check basic connection
+      const { count, error: connectionError } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true });
       
-      for (const table of tables) {
-        const { count, error } = await supabase
-          .from(table)
-          .select('*', { count: 'exact', head: true });
-        
-        if (error) {
-          results.push(`${table}: ERROR - ${error.message}`);
-        } else {
-          results.push(`${table}: ${count} records`);
-        }
+      let resultText = '';
+      
+      if (connectionError) {
+        resultText += `❌ Connection error: ${connectionError.message}\n`;
+      } else {
+        resultText += `✅ Connected to Supabase\n`;
+        resultText += `📊 Found ${count} customers\n`;
       }
       
-      setResult(`Database connection check:\n${results.join('\n')}`);
+      // Step 2: Check write permissions for each table
+      resultText += '\nTesting write permissions:\n';
+      
+      // Test categories
+      try {
+        const testCategory = { 
+          name: 'TEST PERMISSION', 
+          default_capacity: 1, 
+          default_start_time: '00:00',
+          notes: 'This is a test category - will be deleted'
+        };
+        
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('event_categories')
+          .insert(testCategory)
+          .select()
+          .single();
+        
+        if (categoryError) {
+          resultText += `❌ Cannot insert to event_categories: ${categoryError.message}\n`;
+        } else {
+          resultText += `✅ Can insert to event_categories\n`;
+          
+          // Clean up the test data
+          if (categoryData?.id) {
+            const { error: deleteError } = await supabase
+              .from('event_categories')
+              .delete()
+              .eq('id', categoryData.id);
+            
+            if (deleteError) {
+              resultText += `⚠️ Could not delete test category: ${deleteError.message}\n`;
+            } else {
+              resultText += `✅ Can delete from event_categories\n`;
+            }
+          }
+        }
+      } catch (e: any) {
+        resultText += `❌ Error testing event_categories: ${e.message}\n`;
+      }
+      
+      // Test customers
+      try {
+        const testCustomer = { 
+          first_name: 'TEST', 
+          last_name: 'PERMISSION', 
+          mobile_number: '+11111111111' 
+        };
+        
+        const { data: customerData, error: customerError } = await supabase
+          .from('customers')
+          .insert(testCustomer)
+          .select()
+          .single();
+        
+        if (customerError) {
+          resultText += `❌ Cannot insert to customers: ${customerError.message}\n`;
+        } else {
+          resultText += `✅ Can insert to customers\n`;
+          
+          // Clean up the test data
+          if (customerData?.id) {
+            const { error: deleteError } = await supabase
+              .from('customers')
+              .delete()
+              .eq('id', customerData.id);
+            
+            if (deleteError) {
+              resultText += `⚠️ Could not delete test customer: ${deleteError.message}\n`;
+            } else {
+              resultText += `✅ Can delete from customers\n`;
+            }
+          }
+        }
+      } catch (e: any) {
+        resultText += `❌ Error testing customers: ${e.message}\n`;
+      }
+      
+      // Add Supabase connection info
+      resultText += '\nSupabase Connection Info:\n';
+      resultText += `URL: ${process.env.REACT_APP_SUPABASE_URL ? 'Set' : 'Missing'}\n`;
+      resultText += `API Key: ${process.env.REACT_APP_SUPABASE_ANON_KEY ? 'Set' : 'Missing'}\n`;
+      resultText += `Mock Mode: ${isMockMode ? 'Enabled' : 'Disabled'}\n`;
+      
+      setResult(resultText);
     } catch (error: any) {
-      setResult(`Connection error: ${error.message}`);
+      setResult(`Error checking connection: ${error.message}`);
     } finally {
       setLoading(false);
     }

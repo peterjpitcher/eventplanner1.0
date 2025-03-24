@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Booking, Customer, Event } from '../../types/database.types';
+import { Booking } from '../../types/database.types';
 import { bookingService } from '../../services/bookingService';
 
 const BookingList: React.FC = () => {

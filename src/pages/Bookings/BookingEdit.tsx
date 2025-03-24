@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BookingForm from './BookingForm';
 import { Booking } from '../../types/database.types';
+import { bookingService } from '../../services/bookingService';
 
 const BookingEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,48 +16,15 @@ const BookingEdit: React.FC = () => {
       try {
         setLoading(true);
         
-        // Create mock data for development
-        setTimeout(() => {
-          if (id) {
-            const mockBooking: Booking = {
-              id: id,
-              customer_id: String(Math.floor(Math.random() * 10) + 1),
-              event_id: String(Math.floor(Math.random() * 8) + 1),
-              attendees: Math.floor(Math.random() * 5) + 1,
-              notes: Math.random() > 0.5 ? `Notes for booking ${id}` : '',
-              created_at: new Date().toISOString(),
-              customer: {
-                id: String(Math.floor(Math.random() * 10) + 1),
-                first_name: `First${id}`,
-                last_name: `Last${id}`,
-                mobile_number: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-                created_at: new Date().toISOString()
-              },
-              event: {
-                id: String(Math.floor(Math.random() * 8) + 1),
-                name: `Event ${id}`,
-                category_id: String(Math.floor(Math.random() * 5) + 1),
-                capacity: 50 + (parseInt(id) * 10),
-                start_time: new Date(Date.now() + (parseInt(id) * 86400000)).toISOString(),
-                created_at: new Date().toISOString(),
-                remaining_capacity: 30 + Math.floor(Math.random() * 10),
-                event_category: {
-                  id: String(Math.floor(Math.random() * 5) + 1),
-                  name: `Category ${Math.floor(Math.random() * 5) + 1}`,
-                  default_capacity: 100,
-                  default_start_time: '09:00',
-                  created_at: new Date().toISOString()
-                }
-              }
-            };
-            
-            setBooking(mockBooking);
-            setLoading(false);
-          }
-        }, 500);
+        if (id) {
+          // Get real data from Supabase
+          const bookingData = await bookingService.getBookingById(id);
+          setBooking(bookingData);
+        }
       } catch (err) {
         console.error('Error loading booking:', err);
-        setError('Failed to load booking details. Please try again later.');
+        setError('Failed to load booking. Please try again later.');
+      } finally {
         setLoading(false);
       }
     };
@@ -107,12 +75,6 @@ const BookingEdit: React.FC = () => {
               border: 'none',
               cursor: 'pointer'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#4B5563';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#6B7280';
-            }}
           >
             Go Back to Bookings
           </button>
@@ -137,12 +99,6 @@ const BookingEdit: React.FC = () => {
               marginTop: '1rem',
               border: 'none',
               cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#4B5563';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#6B7280';
             }}
           >
             Go Back to Bookings

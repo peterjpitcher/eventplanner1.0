@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Event } from '../../types/database.types';
 import { eventService } from '../../services/eventService';
-import { EventCategory } from '../../types/database.types';
 
 const EventList: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -17,31 +16,10 @@ const EventList: React.FC = () => {
   const loadEvents = async () => {
     try {
       setLoading(true);
-      // Create mock data for development
-      const mockCategories: EventCategory[] = [
-        { id: '1', name: 'Conference', default_capacity: 100, default_start_time: '09:00', created_at: new Date().toISOString() },
-        { id: '2', name: 'Wedding', default_capacity: 50, default_start_time: '14:00', created_at: new Date().toISOString() },
-        { id: '3', name: 'Corporate', default_capacity: 30, default_start_time: '10:00', created_at: new Date().toISOString() },
-        { id: '4', name: 'Birthday', default_capacity: 20, default_start_time: '18:00', created_at: new Date().toISOString() }
-      ];
       
-      const mockEvents = Array(12).fill(null).map((_, i) => {
-        const categoryIndex = i % mockCategories.length;
-        const category = mockCategories[categoryIndex];
-        
-        return {
-          id: String(i + 1),
-          name: `${category.name} Event ${i+1}`,
-          category_id: category.id,
-          capacity: category.default_capacity + (i % 10) * 5,
-          start_time: new Date(Date.now() + (i+1) * 86400000 * 3).toISOString(),
-          notes: i % 3 === 0 ? 'Special event notes' : '',
-          created_at: new Date().toISOString(),
-          category: category
-        };
-      });
-      
-      setEvents(mockEvents);
+      // Use the service to get real data from Supabase
+      const data = await eventService.getAllEvents();
+      setEvents(data);
       setError(null);
     } catch (err) {
       console.error('Error loading events:', err);
@@ -54,9 +32,9 @@ const EventList: React.FC = () => {
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete the event "${name}"?`)) {
       try {
-        // In a real app, this would call an API
-        // await eventService.deleteEvent(id);
-        // For now, filter out the deleted event
+        // Call the service to delete from Supabase
+        await eventService.deleteEvent(id);
+        // Update the local state
         setEvents(events.filter(event => event.id !== id));
       } catch (err) {
         console.error('Error deleting event:', err);

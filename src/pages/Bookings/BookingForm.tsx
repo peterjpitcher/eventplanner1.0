@@ -28,44 +28,58 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
     notes: initialData.notes || '',
   });
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [bookingCount, setBookingCount] = useState<number | null>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load events
-        const eventsData = await eventService.getUpcomingEvents();
-        setEvents(eventsData);
-        
-        // Load customers
-        const customersData = await customerService.getAllCustomers();
-        setCustomers(customersData);
-        
-        // If we have a preselected event or event from initial data, load its details
-        const eventToLoad = initialData.event_id || preselectedEventId;
-        if (eventToLoad) {
-          loadEventDetails(eventToLoad);
-        }
-      } catch (err) {
-        console.error('Error loading form data:', err);
-        setError('Failed to load form data. Please try again later.');
-      }
-    };
-    
     loadData();
-  }, [initialData.event_id, preselectedEventId]);
+  }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (formData.event_id) {
+      loadEventDetails(formData.event_id);
+    }
+  }, [formData.event_id]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load customers and events in parallel using real data from services
+      const [customersData, eventsData] = await Promise.all([
+        customerService.getAllCustomers(),
+        eventService.getAllEvents()
+      ]);
+      
+      setCustomers(customersData);
+      setEvents(eventsData);
+      
+      // If editing, load event details
+      if (formData.event_id) {
+        loadEventDetails(formData.event_id);
+      }
+      
+      setError(null);
+    } catch (err) {
+      console.error('Error loading form data:', err);
+      setError('Failed to load necessary data. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadEventDetails = async (eventId: string) => {
     try {
-      // Get the event details
-      const eventData = await eventService.getEventById(eventId);
-      setSelectedEvent(eventData);
-      
-      // Get the current booking count for capacity check
-      const bookings = await bookingService.getBookingsByEvent(eventId);
-      setBookingCount(bookings.length);
+      const event = events.find(e => e.id === eventId);
+      if (event) {
+        setSelectedEvent(event);
+      } else {
+        const eventData = await eventService.getEventById(eventId);
+        setSelectedEvent(eventData);
+      }
     } catch (err) {
       console.error('Error loading event details:', err);
+      setError('Failed to load event details. Please try again.');
     }
   };
 
@@ -73,20 +87,19 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     
-    // If event is changed, load its details
     if (name === 'event_id' && value) {
       loadEventDetails(value);
     }
   };
 
   const validateForm = (): boolean => {
-    if (!formData.event_id) {
-      setError('Event is required');
+    if (!formData.customer_id) {
+      setError('Please select a customer');
       return false;
     }
     
-    if (!formData.customer_id) {
-      setError('Customer is required');
+    if (!formData.event_id) {
+      setError('Please select an event');
       return false;
     }
     
@@ -97,11 +110,11 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
     }
     
     // Check if exceeding remaining capacity (only for new bookings or increased attendees)
-    if (selectedEvent) {
+    if (selectedEvent && selectedEvent.remaining_capacity !== undefined) {
       const originalAttendees = initialData?.attendees || 0;
       const additionalAttendees = attendees - (isEdit ? originalAttendees : 0);
       
-      if (additionalAttendees > 0 && 
+      if (additionalAttendees > 0 &&
           selectedEvent.remaining_capacity !== undefined && 
           additionalAttendees > selectedEvent.remaining_capacity) {
         setError(`Cannot book ${attendees} attendees. Only ${selectedEvent.remaining_capacity} spots available.`);
@@ -120,39 +133,40 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
     }
     
     const bookingData = {
-      ...formData,
+      customer_id: formData.customer_id,
+      event_id: formData.event_id,
       attendees: parseInt(formData.attendees),
+      notes: formData.notes
     };
     
     try {
       setLoading(true);
       setError(null);
       
-      // For development, mock the API calls
-      setTimeout(() => {
-        if (isEdit && id) {
-          // Mock update
-          console.log('Booking updated:', { id, ...bookingData });
-          navigate(`/bookings/${id}`);
-        } else {
-          // Mock create
-          const newId = Math.floor(Math.random() * 1000).toString();
-          console.log('Booking created:', { id: newId, ...bookingData });
-          navigate(`/bookings/${newId}`);
-        }
-        setLoading(false);
-      }, 800);
+      if (isEdit && id) {
+        // Update existing booking
+        await bookingService.updateBooking(id, bookingData);
+        navigate(`/bookings/${id}`);
+      } else {
+        // Create new booking
+        const newBooking = await bookingService.createBooking(bookingData);
+        navigate('/bookings');
+      }
     } catch (err) {
       console.error('Error saving booking:', err);
       setError('Failed to save booking. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
 
   const formatDateTime = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (error) {
+      return 'Invalid date';
+    }
   };
 
   // Define styles
@@ -210,22 +224,42 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
   };
   
   const selectStyle: React.CSSProperties = {
-    ...inputStyle
+    ...inputStyle,
+    backgroundColor: 'white'
   };
   
-  const infoContainerStyle: React.CSSProperties = {
-    backgroundColor: '#EFF6FF',
-    borderLeftWidth: '4px',
-    borderLeftColor: '#3B82F6',
+  const eventDetailsStyle: React.CSSProperties = {
+    backgroundColor: '#F3F4F6',
+    borderRadius: '0.375rem',
     padding: '1rem',
-    marginBottom: '1rem'
+    marginTop: '0.5rem',
+    fontSize: '0.875rem'
   };
   
-  const warningTextStyle: React.CSSProperties = {
-    color: '#EF4444',
+  const eventDetailItemStyle: React.CSSProperties = {
+    marginBottom: '0.5rem' 
+  };
+  
+  const capacityAvailableStyle: React.CSSProperties = {
+    color: '#047857',
+    fontWeight: 'bold'
+  };
+  
+  const capacityLimitedStyle: React.CSSProperties = {
+    color: '#D97706',
+    fontWeight: 'bold'
+  };
+  
+  const capacityFullStyle: React.CSSProperties = {
+    color: '#DC2626',
+    fontWeight: 'bold'
+  };
+  
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const helperTextStyle: React.CSSProperties = {
+    color: '#6B7280',
     fontSize: '0.75rem',
-    fontStyle: 'italic',
-    marginTop: '0.25rem'
+    fontStyle: 'italic'
   };
   
   const buttonContainerStyle: React.CSSProperties = {
@@ -259,6 +293,22 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
     opacity: 0.7,
     cursor: 'not-allowed'
   };
+  
+  const getCapacityStyle = () => {
+    if (!selectedEvent || selectedEvent.remaining_capacity === undefined) {
+      return {};
+    }
+    
+    const remainingPercentage = (selectedEvent.remaining_capacity / selectedEvent.capacity) * 100;
+    
+    if (remainingPercentage <= 10) {
+      return capacityFullStyle;
+    } else if (remainingPercentage <= 30) {
+      return capacityLimitedStyle;
+    } else {
+      return capacityAvailableStyle;
+    }
+  };
 
   return (
     <div style={containerStyle}>
@@ -290,17 +340,12 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
             required
           >
             <option value="">Select a customer</option>
-            {customers.map((customer) => (
+            {customers.map(customer => (
               <option key={customer.id} value={customer.id}>
-                {customer.first_name} {customer.last_name} ({customer.mobile_number})
+                {customer.first_name} {customer.last_name}
               </option>
             ))}
           </select>
-          {customers.length === 0 && (
-            <p style={warningTextStyle}>
-              No customers available. Please add a customer first.
-            </p>
-          )}
         </div>
         
         <div style={formGroupStyle}>
@@ -320,45 +365,34 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
             required
           >
             <option value="">Select an event</option>
-            {events.map((event) => (
+            {events.map(event => (
               <option key={event.id} value={event.id}>
                 {event.name} - {formatDateTime(event.start_time)}
               </option>
             ))}
           </select>
-          {events.length === 0 && (
-            <p style={warningTextStyle}>
-              No events available. Please create an event first.
-            </p>
-          )}
           
-          {selectedEvent && bookingCount !== null && (
-            <p style={infoContainerStyle}>
-              <strong>Capacity:</strong> {bookingCount} / {selectedEvent.capacity} 
-              ({selectedEvent.capacity - bookingCount} spots available)
-            </p>
+          {selectedEvent && (
+            <div style={eventDetailsStyle}>
+              <div style={eventDetailItemStyle}>
+                <strong>Date & Time:</strong> {formatDateTime(selectedEvent.start_time)}
+              </div>
+              <div style={eventDetailItemStyle}>
+                <strong>Category:</strong> {selectedEvent.category?.name || 'Unknown'}
+              </div>
+              {selectedEvent.remaining_capacity !== undefined && (
+                <div style={{ ...eventDetailItemStyle, ...getCapacityStyle() }}>
+                  <strong>Available:</strong> {selectedEvent.remaining_capacity} of {selectedEvent.capacity} spots
+                </div>
+              )}
+              {selectedEvent.notes && (
+                <div style={eventDetailItemStyle}>
+                  <strong>Notes:</strong> {selectedEvent.notes}
+                </div>
+              )}
+            </div>
           )}
         </div>
-        
-        {selectedEvent && (
-          <div style={infoContainerStyle}>
-            <p style={{fontWeight: 'bold', marginBottom: '0.5rem'}}>
-              Event Details:
-            </p>
-            <p>
-              <strong>Event:</strong> {selectedEvent.name}
-            </p>
-            <p>
-              <strong>Category:</strong> {selectedEvent.event_category?.name || 'Uncategorized'}
-            </p>
-            <p>
-              <strong>Date & Time:</strong> {formatDateTime(selectedEvent.start_time)}
-            </p>
-            <p>
-              <strong>Available Spots:</strong> {selectedEvent.remaining_capacity || 0} (of {selectedEvent.capacity})
-            </p>
-          </div>
-        )}
         
         <div style={formGroupStyle}>
           <label 

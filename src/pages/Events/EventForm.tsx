@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Event, EventCategory } from '../../types/database.types';
 import { eventService } from '../../services/eventService';
@@ -23,39 +23,21 @@ const EventForm: React.FC<EventFormProps> = ({ initialData = {}, isEdit = false 
     notes: initialData.notes || '',
   });
 
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        // Create mock data for development
-        const mockCategories = Array(8).fill(null).map((_, i) => ({
-          id: String(i + 1),
-          name: `Category ${i + 1}`,
-          default_capacity: 50 + (i * 10),
-          default_start_time: i % 2 === 0 ? '09:00' : '14:00',
-          created_at: new Date().toISOString()
-        }));
-        
-        setCategories(mockCategories);
-        
-        // If this is a new event and categories are available, set the first category as default
-        if (!isEdit && mockCategories.length > 0 && !formData.category_id) {
-          handleCategoryChange(mockCategories[0].id);
-        }
-      } catch (err) {
-        console.error('Error loading categories:', err);
-        setError('Failed to load event categories. Please try again later.');
-      }
-    };
+  const getDefaultStartTime = (defaultTime: string): string => {
+    // Get today's date
+    const today = new Date();
+    // Get hours and minutes from default time string (format: "HH:MM")
+    const [hours, minutes] = defaultTime.split(':').map(Number);
     
-    loadCategories();
-  }, [isEdit, formData.category_id]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Set the time
+    today.setHours(hours);
+    today.setMinutes(minutes);
+    
+    // Return as ISO string format for datetime-local input
+    return today.toISOString().slice(0, 16);
   };
 
-  const handleCategoryChange = async (categoryId: string) => {
+  const handleCategoryChange = useCallback(async (categoryId: string) => {
     try {
       if (!categoryId) return;
       
@@ -74,24 +56,33 @@ const EventForm: React.FC<EventFormProps> = ({ initialData = {}, isEdit = false 
         }
       }
     } catch (err) {
-      console.error('Error setting category defaults:', err);
+      console.error('Error updating category defaults:', err);
     }
-  };
+  }, [categories, isEdit]);
 
-  // Calculate default start time based on the category's default time
-  const getDefaultStartTime = (defaultTime: string): string => {
-    // Get today's date
-    const today = new Date();
-    const [hours, minutes] = defaultTime.split(':').map(Number);
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        // Get real categories from Supabase
+        const categoryData = await eventCategoryService.getAllCategories();
+        setCategories(categoryData);
+        
+        // If this is a new event and categories are available, set the first category as default
+        if (!isEdit && categoryData.length > 0 && !formData.category_id) {
+          handleCategoryChange(categoryData[0].id);
+        }
+      } catch (err) {
+        console.error('Error loading categories:', err);
+        setError('Failed to load event categories. Please try again later.');
+      }
+    };
     
-    today.setHours(hours, minutes, 0, 0);
-    
-    // If the time is already past for today, set it for tomorrow
-    if (today < new Date()) {
-      today.setDate(today.getDate() + 1);
-    }
-    
-    return today.toISOString().slice(0, 16);
+    loadCategories();
+  }, [isEdit, formData.category_id, handleCategoryChange]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const validateForm = (): boolean => {
@@ -99,9 +90,8 @@ const EventForm: React.FC<EventFormProps> = ({ initialData = {}, isEdit = false 
       setError('Event name is required');
       return false;
     }
-    
     if (!formData.category_id) {
-      setError('Event category is required');
+      setError('Please select an event category');
       return false;
     }
     
@@ -128,30 +118,27 @@ const EventForm: React.FC<EventFormProps> = ({ initialData = {}, isEdit = false 
     
     const eventData = {
       ...formData,
-      capacity: parseInt(formData.capacity),
+      capacity: parseInt(formData.capacity)
     };
     
     try {
       setLoading(true);
       setError(null);
       
-      // For development, mock the API calls
-      setTimeout(() => {
-        if (isEdit && id) {
-          // Mock update
-          console.log('Event updated:', { id, ...eventData });
-          navigate(`/events/${id}`);
-        } else {
-          // Mock create
-          const newId = Math.floor(Math.random() * 1000).toString();
-          console.log('Event created:', { id: newId, ...eventData });
-          navigate(`/events/${newId}`);
-        }
-        setLoading(false);
-      }, 800);
+      if (isEdit && id) {
+        // Update existing event
+        await eventService.updateEvent(id, eventData);
+        navigate(`/events/${id}`);
+      } else {
+        // Create new event
+        await eventService.createEvent(eventData);
+        // Redirect back to the events list instead of details page
+        navigate('/events');
+      }
     } catch (err) {
       console.error('Error saving event:', err);
       setError('Failed to save event. Please try again.');
+    } finally {
       setLoading(false);
     }
   };

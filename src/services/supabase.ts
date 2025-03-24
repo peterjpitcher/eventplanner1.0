@@ -11,50 +11,56 @@ const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
 console.log(`Supabase URL is ${supabaseUrl ? 'set: ' + supabaseUrl.substring(0, 15) + '...' : 'missing'}`);
 console.log(`Supabase Anon Key is ${supabaseAnonKey ? 'set: ' + supabaseAnonKey.substring(0, 5) + '...' : 'missing'}`);
 
-// Determine if we should use the real Supabase client or a mock version
-const useMockData = !supabaseUrl || !supabaseAnonKey;
+// Force production mode to always use real data
+const useMockData = false;
 
 // Log the application mode
-if (useMockData) {
-  console.warn('MOCK MODE ACTIVE: Using mock data because Supabase credentials are missing or invalid.');
-  
-  // Make it clearer which variable is missing
-  if (!supabaseUrl) console.error('REACT_APP_SUPABASE_URL is missing or empty');
-  if (!supabaseAnonKey) console.error('REACT_APP_SUPABASE_ANON_KEY is missing or empty');
-} else {
-  console.log('PRODUCTION MODE: Connected to Supabase for real data.');
-}
+console.log('PRODUCTION MODE FORCED: Always using real Supabase data.');
 
 // Attempt to connect to Supabase even without proper environment variables
 // This will help diagnose if the issue is with the Supabase connection itself
 let supabaseInstance: SupabaseClient | null = null;
 try {
-  if (!useMockData) {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
-    console.log('Supabase client created successfully.');
-    
-    // Test the connection with async function
-    const testConnection = async () => {
-      try {
-        const response = await supabaseInstance!.from('customers').select('count', { count: 'exact', head: true });
-        if (response.error) {
-          console.error('Failed to connect to Supabase:', response.error.message);
-        } else {
-          console.log(`Successfully connected to Supabase! Found ${response.count} customers.`);
-        }
-      } catch (error: any) {
-        console.error('Error testing Supabase connection:', error.message);
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  console.log('Supabase client created successfully.');
+  
+  // Test the connection with async function
+  const testConnection = async () => {
+    try {
+      const response = await supabaseInstance!.from('customers').select('count', { count: 'exact', head: true });
+      if (response.error) {
+        console.error('Failed to connect to Supabase:', response.error.message);
+      } else {
+        console.log(`Successfully connected to Supabase! Found ${response.count} customers.`);
       }
-    };
-    
-    // Execute the test
-    testConnection();
-  }
+    } catch (error: any) {
+      console.error('Error testing Supabase connection:', error.message);
+    }
+  };
+  
+  // Execute the test
+  testConnection();
 } catch (err) {
   console.error('Error creating Supabase client:', err);
 }
 
-// Create a mock implementation of SupabaseClient for development without credentials
+// Export either the real Supabase client or the mock version
+export const supabase = supabaseInstance || createClient(supabaseUrl, supabaseAnonKey);
+
+// Export a flag that indicates whether we're using mock data (always false now)
+export const isMockMode = useMockData;
+
+// Export the environment variable values directly (without the actual values for security)
+// This helps with debugging
+export const supabaseStatus = {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  urlValue: supabaseUrl ? `${supabaseUrl.substring(0, 8)}...` : 'missing',
+  keyValue: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 4)}...` : 'missing',
+  isMockMode
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const createMockClient = (): SupabaseClient => {
   console.warn('Using mock Supabase client. Data operations will use local mock data only.');
   
@@ -74,22 +80,4 @@ const createMockClient = (): SupabaseClient => {
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
     },
   } as unknown as SupabaseClient;
-};
-
-// Export either the real Supabase client or the mock version
-export const supabase = useMockData 
-  ? createMockClient() 
-  : (supabaseInstance || createMockClient());
-
-// Export a flag that indicates whether we're using mock data
-export const isMockMode = useMockData;
-
-// Export the environment variable values directly (without the actual values for security)
-// This helps with debugging
-export const supabaseStatus = {
-  hasUrl: !!supabaseUrl,
-  hasKey: !!supabaseAnonKey,
-  urlValue: supabaseUrl ? `${supabaseUrl.substring(0, 8)}...` : 'missing',
-  keyValue: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 4)}...` : 'missing',
-  isMockMode
 }; 

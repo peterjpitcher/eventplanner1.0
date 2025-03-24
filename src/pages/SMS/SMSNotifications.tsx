@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Customer, Event } from '../../types/database.types';
 import { customerService } from '../../services/customerService';
-import { smsService, SMS_TEMPLATES } from '../../services/smsService';
+import { SMS_TEMPLATES } from '../../services/smsService';
 import { eventService } from '../../services/eventService';
-import { bookingService } from '../../services/bookingService';
 
 const SMSNotifications: React.FC = () => {
   // State for customer selection for individual messages
@@ -21,11 +20,7 @@ const SMSNotifications: React.FC = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [sendingReminders, setSendingReminders] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [loadingCustomers, setLoadingCustomers] = useState(true);
-  const [loadingEvents, setLoadingEvents] = useState(true);
-  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
-  const [message, setMessage] = useState('');
-  const [sending, setSending] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
@@ -34,8 +29,7 @@ const SMSNotifications: React.FC = () => {
   
   const loadData = async () => {
     try {
-      setLoadingCustomers(true);
-      setLoadingEvents(true);
+      setLoading(true);
       
       // Load customers and events in parallel
       const [customersData, eventsData] = await Promise.all([
@@ -50,8 +44,7 @@ const SMSNotifications: React.FC = () => {
       console.error('Error loading data:', error);
       setError('Failed to load data. Please try again later.');
     } finally {
-      setLoadingCustomers(false);
-      setLoadingEvents(false);
+      setLoading(false);
     }
   };
   
@@ -363,79 +356,6 @@ const SMSNotifications: React.FC = () => {
     textAlign: 'center',
     padding: '1rem 0',
     color: '#6B7280'
-  };
-  
-  const handleSendSMS = async () => {
-    if (!message.trim()) {
-      setError('Please enter a message');
-      return;
-    }
-    
-    if (selectedCustomers.length === 0) {
-      setError('Please select at least one customer');
-      return;
-    }
-    
-    try {
-      setSending(true);
-      setResult(null);
-      setError(null);
-      
-      // Get the full customer objects for the selected IDs
-      const selectedCustomerObjects = customers.filter(c => 
-        selectedCustomers.includes(c.id)
-      );
-      
-      // Send SMS through custom implementation since sendBulkSMS doesn't exist
-      let successCount = 0;
-      const promises = selectedCustomerObjects.map(async (customer) => {
-        try {
-          // Use the existing sendSMS method instead
-          const response = await smsService.sendSMS(
-            customer.mobile_number,
-            message,
-            { customerName: `${customer.first_name} ${customer.last_name}` }
-          );
-          if (response.success) {
-            successCount++;
-          }
-          return response;
-        } catch (err) {
-          console.error(`Failed to send SMS to ${customer.mobile_number}:`, err);
-          return { success: false, message: String(err) };
-        }
-      });
-      
-      await Promise.all(promises);
-      
-      setResult({
-        success: successCount > 0,
-        message: `Successfully sent ${successCount} of ${selectedCustomerObjects.length} messages`
-      });
-      setMessage('');
-      setSelectedCustomers([]);
-    } catch (error) {
-      console.error('Error sending SMS:', error);
-      setError('Failed to send SMS. Please try again later.');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const toggleCustomerSelection = (customerId: string) => {
-    setSelectedCustomers(prev => 
-      prev.includes(customerId)
-        ? prev.filter(id => id !== customerId)
-        : [...prev, customerId]
-    );
-  };
-
-  const selectAllCustomers = () => {
-    setSelectedCustomers(customers.map(c => c.id));
-  };
-
-  const deselectAllCustomers = () => {
-    setSelectedCustomers([]);
   };
   
   return (
