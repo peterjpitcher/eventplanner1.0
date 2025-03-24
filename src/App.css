@@ -1,6 +1,15 @@
+/* Base App styling */
+
+/* Reset default margin for App container */
 .App {
   text-align: center;
 }
+
+/* Rest of the styling is now handled by inline styles in components
+   So we're removing any potentially conflicting styles from this file */
+
+/* Import the index.css styles explicitly to ensure they apply correctly */
+@import './index.css';
 
 .App-logo {
   height: 40vmin;
