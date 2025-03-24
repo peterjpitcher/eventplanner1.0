@@ -13,10 +13,10 @@ const TWILIO_ACCOUNT_SID = process.env.REACT_APP_TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.REACT_APP_TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.REACT_APP_TWILIO_PHONE_NUMBER;
 
-// Only try to load Twilio if we're in a browser-compatible environment
-if (!isBrowser || (isBrowser && window.Buffer)) {
-  try {
-    // This approach prevents build errors if twilio isn't installed
+// Try to initialize Twilio client without relying on Buffer check
+try {
+  // This approach prevents build errors if twilio isn't installed
+  if (typeof require !== 'undefined') {
     twilio = require('twilio');
     
     // Initialize Twilio client if credentials are available
@@ -30,11 +30,9 @@ if (!isBrowser || (isBrowser && window.Buffer)) {
     } else {
       console.warn('Twilio credentials not found or twilio package not available');
     }
-  } catch (error) {
-    console.warn('Twilio package not available or not compatible with this environment:', error);
   }
-} else {
-  console.warn('Browser environment detected without polyfills - SMS functionality will be simulated');
+} catch (error) {
+  console.warn('Twilio package not available or not compatible with this environment:', error);
 }
 
 // Message templates for different notification types
@@ -116,6 +114,22 @@ export const smsService = {
     return !!TWILIO_ACCOUNT_SID && !!TWILIO_AUTH_TOKEN && !!TWILIO_PHONE_NUMBER;
   },
   
+  // Force SMS to be sent in production mode (no simulation)
+  forceSMSProductionMode: (): boolean => {
+    // If Twilio is configured but client isn't initialized, try to initialize it now
+    if (!!TWILIO_ACCOUNT_SID && !!TWILIO_AUTH_TOKEN && !!TWILIO_PHONE_NUMBER && !twilioClient && twilio) {
+      try {
+        twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+        console.log('Twilio client force-initialized successfully');
+        return true;
+      } catch (error) {
+        console.error('Failed to force-initialize Twilio client:', error);
+        return false;
+      }
+    }
+    return !!twilioClient;
+  },
+  
   // Send an SMS using Twilio API
   sendSMS: async (
     phoneNumber: string, 
@@ -140,18 +154,63 @@ export const smsService = {
       
       console.log(`[SMS Service] Attempting to send SMS to: ${formattedPhoneNumber}, Message: ${messageBody}`);
       
+      // Try to create a new Twilio client if it doesn't exist yet
+      if (!twilioClient && twilio && TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+        try {
+          twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+          console.log('Twilio client initialized just-in-time');
+        } catch (error) {
+          console.error('Failed to initialize Twilio client just-in-time:', error);
+        }
+      }
+      
       // Use the Twilio API to send the message if available
       if (!twilioClient) {
         // In deployment or if Twilio isn't available, simulate success for preview/testing
         console.warn('Twilio client not available - simulating SMS sending in browser environment');
         
-        // Log the simulated message
-        await logSMSMessage(phoneNumber, messageBody, true);
-        
-        return { 
-          success: true, 
-          message: `SMS simulated successfully in browser environment. Message would be sent to ${formattedPhoneNumber}` 
-        };
+        // Make a direct API call to Twilio without using the client
+        try {
+          const accountSid = TWILIO_ACCOUNT_SID;
+          const authToken = TWILIO_AUTH_TOKEN;
+          const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+          
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`)
+            },
+            body: new URLSearchParams({
+              To: formattedPhoneNumber,
+              From: TWILIO_PHONE_NUMBER,
+              Body: messageBody
+            })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log(`[SMS Service] Message sent successfully via direct API. SID: ${data.sid}`);
+            await logSMSMessage(phoneNumber, messageBody, true);
+            return { 
+              success: true, 
+              message: `SMS sent successfully via direct API. Message SID: ${data.sid}` 
+            };
+          } else {
+            const errorData = await response.json();
+            throw new Error(`Twilio API error: ${errorData.message || 'Unknown error'}`);
+          }
+        } catch (directApiError) {
+          console.error('Direct Twilio API call failed:', directApiError);
+          
+          // Log the simulated message as fallback
+          await logSMSMessage(phoneNumber, messageBody, true);
+          
+          return { 
+            success: true, 
+            message: `SMS simulated successfully in browser environment. Message would be sent to ${formattedPhoneNumber}` 
+          };
+        }
       }
       
       try {

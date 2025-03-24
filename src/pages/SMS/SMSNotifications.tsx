@@ -24,6 +24,7 @@ const SMSNotifications: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null);
   const [isTwilioConfigured, setIsTwilioConfigured] = useState<boolean>(false);
+  const [twilioForced, setTwilioForced] = useState<boolean>(false);
   
   useEffect(() => {
     loadData();
@@ -171,6 +172,22 @@ const SMSNotifications: React.FC = () => {
       });
     } finally {
       setSendingReminders(false);
+    }
+  };
+  
+  const handleForceProductionMode = () => {
+    const forced = smsService.forceSMSProductionMode();
+    setTwilioForced(forced);
+    if (forced) {
+      setResult({
+        success: true,
+        message: 'Twilio client force-initialized for production mode. SMS messages will now be sent via Twilio API.'
+      });
+    } else {
+      setResult({
+        success: false,
+        message: 'Failed to force production mode. Check console for details.'
+      });
     }
   };
   
@@ -381,16 +398,22 @@ const SMSNotifications: React.FC = () => {
       
       {/* Twilio Configuration Warning */}
       {!isTwilioConfigured && (
-        <div style={{
-          backgroundColor: '#FEF3C7',
-          color: '#92400E',
-          padding: '1rem',
-          borderRadius: '0.375rem',
-          marginBottom: '1.5rem',
-          border: '1px solid #F59E0B',
-        }}>
-          <strong>Warning:</strong> Twilio is not properly configured or available in this environment. 
-          SMS sending will be simulated. Messages will be logged but not actually sent.
+        <div className="alert alert-warning mt-3">
+          <h4>SMS Service Configuration</h4>
+          <p>
+            The SMS service is currently in simulation mode because Twilio is not properly configured.
+            Check your environment variables to enable real SMS sending.
+          </p>
+          <p>
+            Messages will be logged but not actually sent to recipients.
+          </p>
+          <button 
+            className="btn btn-warning mt-2" 
+            onClick={handleForceProductionMode}
+            disabled={twilioForced}
+          >
+            {twilioForced ? 'Production Mode Enabled' : 'Force Production Mode'}
+          </button>
         </div>
       )}
       
