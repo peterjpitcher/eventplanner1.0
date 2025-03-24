@@ -22,7 +22,7 @@ A simple, efficient web application for managing pub events, customer registrati
 
 ## Implementation Status
 
-The project has completed **Phase 1 (Foundation)**, **Phase 2 (Core Functionality)**, **Phase 3 (SMS & Dashboard)**, and now **Phase 4 (Testing & Deployment)** with Supabase integration. Overall completion is approximately **95%**.
+The project has completed **Phase 1 (Foundation)**, **Phase 2 (Core Functionality)**, **Phase 3 (SMS & Dashboard)**, and **Phase 4 (Testing & Deployment)** with Supabase integration and Vercel deployment. Overall completion is **100%**.
 
 ### Component Status
 
@@ -40,12 +40,30 @@ The project has completed **Phase 1 (Foundation)**, **Phase 2 (Core Functionalit
 | Performance Optimization | ✅ COMPLETED | 100% |
 | Documentation | ✅ COMPLETED | 100% |
 | Supabase Integration | ✅ COMPLETED | 100% |
+| Vercel Deployment | ✅ COMPLETED | 100% |
 
 For detailed implementation status, see the [Implementation Plan](./docs/enhancements/v1.0/implementation-plan.md).
 
-## Recent Updates (v1.1.1)
+## Recent Updates (v1.1.2)
 
-The application has been significantly improved with the following features:
+The application has been successfully deployed to Vercel and is now live at:
+[https://eventplanner1-0-mvwvfanvh-peter-pitchers-projects.vercel.app](https://eventplanner1-0-mvwvfanvh-peter-pitchers-projects.vercel.app)
+
+Key improvements:
+
+1. **Production Deployment**:
+   - Configured Vercel deployment with proper environment variables
+   - Set up production build pipeline
+   - Fixed configuration issues in vercel.json
+
+2. **Code Quality Enhancements**:
+   - Additional ESLint warnings fixed
+   - Improved component dependency management
+   - Better handling of form submissions
+
+### Previous Updates (v1.1.1)
+
+The application had been significantly improved with the following features:
 
 1. **Enhanced User Experience**:
    - Improved form submission flow - forms now redirect back to list pages after successful creation
@@ -81,46 +99,12 @@ To use the application with real data:
 2. Use the DatabaseInitializer tool to populate your Supabase database
 3. All components (Dashboard, CustomerList, BookingList, etc.) will automatically fetch and display real data
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v18 or higher)
-- npm
-- Supabase account
-- Twilio account (optional for SMS functionality)
-
-### Installation
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/peterjpitcher/eventplanner1.0.git
-   cd event-planner
-   ```
-
-2. Install dependencies:
-   ```
-   npm install
-   ```
-
-3. Set up environment variables:
-   - Copy the `.env.example` file to `.env.local`
-   - Fill in your Supabase and Twilio credentials
-
-   ```
-   REACT_APP_SUPABASE_URL=your-supabase-project-url
-   REACT_APP_SUPABASE_ANON_KEY=your-supabase-anon-key
-   REACT_APP_TWILIO_ACCOUNT_SID=your-twilio-account-sid (optional)
-   REACT_APP_TWILIO_AUTH_TOKEN=your-twilio-auth-token (optional)
-   REACT_APP_TWILIO_PHONE_NUMBER=your-twilio-phone-number (optional)
-   ```
-
-4. Start the development server:
-   ```
-   npm start
-   ```
-
 ## Deployment
+
+### Production Deployment Status
+
+The application is now **LIVE** and deployed on Vercel at:
+[https://eventplanner1-0-mvwvfanvh-peter-pitchers-projects.vercel.app](https://eventplanner1-0-mvwvfanvh-peter-pitchers-projects.vercel.app)
 
 ### Deploying to Vercel
 
@@ -137,9 +121,53 @@ The application is configured for deployment on Vercel. Follow these steps to de
    - `REACT_APP_TWILIO_AUTH_TOKEN` (optional) - Your Twilio auth token
    - `REACT_APP_TWILIO_PHONE_NUMBER` (optional) - Your Twilio phone number
 
+   Note: Ensure environment variables are added as plain values, not using the `@` reference format.
+
 4. **Deploy**: Vercel will automatically deploy your application. Any future pushes to the main branch will trigger new deployments.
 
 5. **Redeployment**: If you update environment variables after deployment, you need to trigger a new deployment for the changes to take effect.
+
+### Vercel Configuration
+
+The root of the project contains a `vercel.json` file that configures the deployment:
+
+```json
+{
+  "version": 2,
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "build",
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "/logo192.png",
+      "dest": "/logo192.png"
+    },
+    {
+      "src": "/logo512.png",
+      "dest": "/logo512.png"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "/robots.txt",
+      "dest": "/robots.txt"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
+```
 
 ### Development vs Production Mode
 
@@ -241,12 +269,13 @@ For more detailed information about specific aspects of the application, please 
 
 ## Next Steps
 
-The immediate priorities for Phase 4 are:
+Future enhancements to consider:
 
-1. Optimize application performance
-2. Implement comprehensive testing
-3. Set up continuous deployment pipeline
-4. Add offline functionality
+1. Add user authentication with role-based access control
+2. Improve mobile responsiveness for all screens
+3. Implement event analytics and reporting features
+4. Add advanced filtering and search capabilities
+5. Implement offline functionality with service workers
 
 ## Troubleshooting
 
