@@ -176,48 +176,33 @@ const SMSNotifications: React.FC = () => {
   };
   
   const handleForceProductionMode = () => {
-    try {
-      const accountSid = process.env.REACT_APP_TWILIO_ACCOUNT_SID || '';
-      const authToken = process.env.REACT_APP_TWILIO_AUTH_TOKEN || '';
-      
-      // Log the first few characters of credentials to debug (don't log full credentials)
-      console.log(`Checking Twilio credentials - SID: ${accountSid.substring(0, 4)}... Auth: ${authToken.substring(0, 4)}...`);
-      
-      // Perform a test API call directly to Twilio to verify connectivity
-      fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Basic ' + btoa(`${accountSid}:${authToken}`)
-        }
-      })
-      .then(response => {
-        console.log('Twilio API response status:', response.status);
-        if (response.ok) {
-          setTwilioForced(true);
+    setResult({
+      success: true,
+      message: 'Verifying Twilio API connection...'
+    });
+    
+    smsService.forceSMSProductionMode()
+      .then((success) => {
+        setTwilioForced(success);
+        if (success) {
           setResult({
             success: true,
-            message: 'Twilio API connection verified. SMS messages will now be sent using direct API calls.'
+            message: 'Twilio API connection verified. SMS messages will now be sent using server-side API calls.'
           });
         } else {
-          return response.json().then(data => {
-            throw new Error(`API returned ${response.status}: ${JSON.stringify(data)}`);
+          setResult({
+            success: false,
+            message: 'Failed to verify Twilio API connection. Check server logs for details.'
           });
         }
       })
       .catch(error => {
-        console.error('Error verifying Twilio API connection:', error);
+        console.error('Error verifying Twilio connection:', error);
         setResult({
           success: false,
-          message: `Failed to verify Twilio API connection: ${error.message}`
+          message: `Error verifying Twilio connection: ${error.message}`
         });
       });
-    } catch (error) {
-      console.error('Failed to force production mode:', error);
-      setResult({
-        success: false,
-        message: `Failed to force production mode: ${error}`
-      });
-    }
   };
   
   const formatDateTime = (dateString: string) => {
@@ -443,10 +428,10 @@ const SMSNotifications: React.FC = () => {
           onClick={handleForceProductionMode}
           disabled={twilioForced}
         >
-          {twilioForced ? 'Direct API Mode Enabled' : 'Enable Direct API Mode'}
+          {twilioForced ? 'API Mode Enabled' : 'Enable API Mode'}
         </button>
         <p className="mt-2 text-muted small">
-          This ensures messages are sent using direct API calls, bypassing any Node.js dependencies.
+          This uses a secure server-side API to send SMS messages, avoiding browser security limitations.
         </p>
       </div>
       

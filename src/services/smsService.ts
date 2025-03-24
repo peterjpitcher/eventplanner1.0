@@ -115,19 +115,25 @@ export const smsService = {
   },
   
   // Force SMS to be sent in production mode (no simulation)
-  forceSMSProductionMode: (): boolean => {
-    // If Twilio is configured but client isn't initialized, try to initialize it now
-    if (!!TWILIO_ACCOUNT_SID && !!TWILIO_AUTH_TOKEN && !!TWILIO_PHONE_NUMBER && !twilioClient && twilio) {
+  forceSMSProductionMode: (): Promise<boolean> => {
+    return new Promise(async (resolve) => {
       try {
-        twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-        console.log('Twilio client force-initialized successfully');
-        return true;
+        // Use the server-side API to check Twilio connectivity
+        const response = await fetch('/api/check-twilio');
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          console.log('Twilio API connection verified via server-side API');
+          resolve(true);
+        } else {
+          console.error('Failed to verify Twilio API connection:', data.message);
+          resolve(false);
+        }
       } catch (error) {
-        console.error('Failed to force-initialize Twilio client:', error);
-        return false;
+        console.error('Error checking Twilio API connection:', error);
+        resolve(false);
       }
-    }
-    return !!twilioClient;
+    });
   },
   
   // Send an SMS using Twilio API
@@ -154,87 +160,45 @@ export const smsService = {
       
       console.log(`[SMS Service] Attempting to send SMS to: ${formattedPhoneNumber}, Message: ${messageBody}`);
       
-      // ALWAYS use direct API approach in browser environments instead of twilioClient
-      // This ensures SMS sending works even without the Node.js Buffer polyfill
+      // Use the server-side API endpoint instead of direct Twilio API call
       try {
-        const accountSid = TWILIO_ACCOUNT_SID || '';
-        const authToken = TWILIO_AUTH_TOKEN || '';
-        const fromNumber = TWILIO_PHONE_NUMBER || '';
+        console.log('[SMS Service] Using server-side API endpoint');
         
-        console.log(`[SMS Service] Using direct Twilio API call to ${formattedPhoneNumber}`);
-        console.log(`[SMS Service] Credentials check - SID: ${accountSid.substring(0, 4)}... Auth: ${authToken.substring(0, 4)}...`);
-        
-        // Create Authorization header with base64 encoded credentials
-        const authString = btoa(`${accountSid}:${authToken}`);
-        
-        const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+        const response = await fetch('/api/send-sms', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': `Basic ${authString}`
+            'Content-Type': 'application/json'
           },
-          body: new URLSearchParams({
-            To: formattedPhoneNumber,
-            From: fromNumber,
-            Body: messageBody
+          body: JSON.stringify({
+            to: formattedPhoneNumber,
+            body: messageBody
           })
         });
         
-        // Log response status for debugging
-        console.log(`[SMS Service] Twilio API response status: ${response.status}`);
+        const responseData = await response.json();
         
-        if (response.ok) {
-          const data = await response.json();
-          console.log(`[SMS Service] Message sent successfully via direct API. SID: ${data.sid}`);
+        // Log response status for debugging
+        console.log(`[SMS Service] API response status: ${response.status}`, responseData);
+        
+        if (response.ok && responseData.success) {
+          console.log(`[SMS Service] Message sent successfully via API. SID: ${responseData.sid}`);
           await logSMSMessage(phoneNumber, messageBody, true);
           return { 
             success: true, 
-            message: `SMS sent successfully via direct API. Message SID: ${data.sid}` 
+            message: `SMS sent successfully. Message SID: ${responseData.sid}` 
           };
         } else {
-          const errorData = await response.json();
-          throw new Error(`Twilio API error: ${errorData.message || JSON.stringify(errorData) || 'Unknown error'}`);
+          throw new Error(responseData.message || 'API error');
         }
-      } catch (directApiError) {
-        console.error('Direct Twilio API call failed:', directApiError);
+      } catch (apiError) {
+        console.error('API call failed:', apiError);
         
-        // Only try the traditional twilioClient as a fallback if it exists
-        if (twilioClient) {
-          try {
-            const message = await twilioClient.messages.create({
-              body: messageBody,
-              from: TWILIO_PHONE_NUMBER,
-              to: formattedPhoneNumber
-            });
-            
-            console.log(`[SMS Service] Message sent successfully via twilioClient. SID: ${message.sid}`);
-            
-            // Log the message to the SMS logs table
-            await logSMSMessage(phoneNumber, messageBody, true);
-            
-            return { 
-              success: true, 
-              message: `SMS sent successfully. Message SID: ${message.sid}` 
-            };
-          } catch (twilioError) {
-            console.error('Twilio API error:', twilioError);
-            
-            // Log the failed message
-            await logSMSMessage(phoneNumber, messageBody, false, String(twilioError));
-            
-            return { 
-              success: false, 
-              message: `Twilio API error: ${twilioError}` 
-            };
-          }
-        }
-        
-        // If we get here, both methods failed, but we'll still log the attempt
-        await logSMSMessage(phoneNumber, messageBody, false, String(directApiError));
+        // Log the failed message
+        await logSMSMessage(phoneNumber, messageBody, false, String(apiError));
         
         return { 
           success: false, 
-          message: `Failed to send SMS: ${directApiError}` 
+          message: `Failed to send SMS: ${apiError}` 
         };
       }
     } catch (error) {
