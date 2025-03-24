@@ -18,17 +18,15 @@ const CustomerEdit: React.FC = () => {
         // Create mock data for development
         setTimeout(() => {
           if (id) {
-            const mockCustomer: Customer = {
+            // Create mock customer data if not passed
+            setCustomer({
               id: id,
               first_name: `First${id}`,
               last_name: `Last${id}`,
-              email: `customer${id}@example.com`,
               mobile_number: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
               notes: `Notes for customer ${id}`,
               created_at: new Date().toISOString()
-            };
-            
-            setCustomer(mockCustomer);
+            });
             setLoading(false);
           }
         }, 500);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Customer } from '../../types/database.types';
+import { Customer, Event } from '../../types/database.types';
 import { customerService } from '../../services/customerService';
 import { smsService, SMS_TEMPLATES } from '../../services/smsService';
 import { eventService } from '../../services/eventService';
@@ -10,7 +10,7 @@ const SMSNotifications: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [customMessage, setCustomMessage] = useState<string>('');
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   
   // State for logs
@@ -21,58 +21,39 @@ const SMSNotifications: React.FC = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [sendingReminders, setSendingReminders] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [loadingCustomers, setLoadingCustomers] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        
-        // Create mock data for development
-        const mockCustomers = Array(10).fill(null).map((_, i) => ({
-          id: String(i + 1),
-          first_name: 'Customer',
-          last_name: `${i + 1}`,
-          email: `customer${i + 1}@example.com`,
-          mobile_number: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-          notes: i % 3 === 0 ? 'VIP customer' : '',
-          created_at: new Date().toISOString()
-        }));
-        
-        const mockEvents = Array(5).fill(null).map((_, i) => ({
-          id: String(i + 1),
-          name: `Event ${i + 1}`,
-          category_id: String(i % 4 + 1),
-          capacity: 50 + (i % 10) * 5,
-          start_time: new Date(Date.now() + (i+1) * 86400000 * 2).toISOString(),
-          notes: i % 4 === 0 ? 'Important event' : '',
-          created_at: new Date().toISOString()
-        }));
-        
-        const mockSmsLogs = Array(8).fill(null).map((_, i) => ({
-          id: String(i + 1),
-          phone_number: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-          message_body: i % 3 === 0 
-            ? SMS_TEMPLATES.BOOKING_CONFIRMATION.replace('[CUSTOMER_NAME]', 'Customer Name').replace('[EVENT_NAME]', 'Event Name')
-            : i % 3 === 1
-              ? SMS_TEMPLATES.EVENT_REMINDER.replace('[CUSTOMER_NAME]', 'Customer Name').replace('[EVENT_NAME]', 'Event Name')
-              : 'Custom message sent to customer',
-          success: i % 4 !== 0,
-          error_message: i % 4 === 0 ? 'Failed to deliver message' : null,
-          created_at: new Date(Date.now() - i * 3600000).toISOString()
-        }));
-        
-        setCustomers(mockCustomers);
-        setEvents(mockEvents);
-        setSmsLogs(mockSmsLogs);
-      } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     loadData();
   }, []);
+  
+  const loadData = async () => {
+    try {
+      setLoadingCustomers(true);
+      setLoadingEvents(true);
+      
+      // Load customers and events in parallel
+      const [customersData, eventsData] = await Promise.all([
+        customerService.getAllCustomers(),
+        eventService.getAllEvents()
+      ]);
+      
+      setCustomers(customersData);
+      setEvents(eventsData);
+      setError(null);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setError('Failed to load data. Please try again later.');
+    } finally {
+      setLoadingCustomers(false);
+      setLoadingEvents(false);
+    }
+  };
   
   const handleSendCustomMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -382,6 +363,79 @@ const SMSNotifications: React.FC = () => {
     textAlign: 'center',
     padding: '1rem 0',
     color: '#6B7280'
+  };
+  
+  const handleSendSMS = async () => {
+    if (!message.trim()) {
+      setError('Please enter a message');
+      return;
+    }
+    
+    if (selectedCustomers.length === 0) {
+      setError('Please select at least one customer');
+      return;
+    }
+    
+    try {
+      setSending(true);
+      setResult(null);
+      setError(null);
+      
+      // Get the full customer objects for the selected IDs
+      const selectedCustomerObjects = customers.filter(c => 
+        selectedCustomers.includes(c.id)
+      );
+      
+      // Send SMS through custom implementation since sendBulkSMS doesn't exist
+      let successCount = 0;
+      const promises = selectedCustomerObjects.map(async (customer) => {
+        try {
+          // Use the existing sendSMS method instead
+          const response = await smsService.sendSMS(
+            customer.mobile_number,
+            message,
+            { customerName: `${customer.first_name} ${customer.last_name}` }
+          );
+          if (response.success) {
+            successCount++;
+          }
+          return response;
+        } catch (err) {
+          console.error(`Failed to send SMS to ${customer.mobile_number}:`, err);
+          return { success: false, message: String(err) };
+        }
+      });
+      
+      await Promise.all(promises);
+      
+      setResult({
+        success: successCount > 0,
+        message: `Successfully sent ${successCount} of ${selectedCustomerObjects.length} messages`
+      });
+      setMessage('');
+      setSelectedCustomers([]);
+    } catch (error) {
+      console.error('Error sending SMS:', error);
+      setError('Failed to send SMS. Please try again later.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const toggleCustomerSelection = (customerId: string) => {
+    setSelectedCustomers(prev => 
+      prev.includes(customerId)
+        ? prev.filter(id => id !== customerId)
+        : [...prev, customerId]
+    );
+  };
+
+  const selectAllCustomers = () => {
+    setSelectedCustomers(customers.map(c => c.id));
+  };
+
+  const deselectAllCustomers = () => {
+    setSelectedCustomers([]);
   };
   
   return (

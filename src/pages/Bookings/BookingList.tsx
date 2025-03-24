@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Booking } from '../../types/database.types';
+import { Booking, Customer, Event } from '../../types/database.types';
 import { bookingService } from '../../services/bookingService';
 
 const BookingList: React.FC = () => {
@@ -19,52 +19,13 @@ const BookingList: React.FC = () => {
   }, [eventId, customerId]);
 
   const loadBookings = async () => {
-    setLoading(true);
-    
     try {
-      // Generate mock data for development
-      const mockData = Array(15).fill(null).map((_, i) => ({
-        id: String(i + 1),
-        customer_id: String(Math.floor(Math.random() * 10) + 1),
-        event_id: String(Math.floor(Math.random() * 8) + 1),
-        attendees: Math.floor(Math.random() * 5) + 1, // Add attendees property
-        notes: Math.random() > 0.5 ? `Notes for booking ${i + 1}` : '',
-        created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-        customer: {
-          id: String(Math.floor(Math.random() * 10) + 1),
-          first_name: `First${i + 1}`,
-          last_name: `Last${i + 1}`,
-          email: `customer${i + 1}@example.com`,
-          mobile_number: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-          notes: Math.random() > 0.5 ? `Notes for customer ${i + 1}` : '',
-          created_at: new Date().toISOString()
-        },
-        event: {
-          id: String(Math.floor(Math.random() * 8) + 1),
-          name: `Event ${i + 1}`,
-          category_id: String(Math.floor(Math.random() * 5) + 1),
-          capacity: 50 + (i * 10),
-          start_time: new Date(Date.now() + (i * 86400000)).toISOString(),
-          notes: Math.random() > 0.5 ? `Notes for event ${i + 1}` : '',
-          created_at: new Date().toISOString()
-        }
-      }));
-      
-      // Filter by search term if applicable
-      const filteredMockData = mockData.filter(booking => {
-        if (!searchTerm) return true;
-        
-        const customerFullName = `${booking.customer.first_name} ${booking.customer.last_name}`.toLowerCase();
-        const eventName = booking.event.name.toLowerCase();
-        const searchLower = searchTerm.toLowerCase();
-        
-        return customerFullName.includes(searchLower) || eventName.includes(searchLower);
-      });
-      
-      setBookings(filteredMockData);
+      setLoading(true);
+      const data = await bookingService.getAllBookings();
+      setBookings(data);
       setError(null);
-    } catch (err) {
-      console.error('Error loading bookings:', err);
+    } catch (error) {
+      console.error('Error loading bookings:', error);
       setError('Failed to load bookings. Please try again later.');
     } finally {
       setLoading(false);

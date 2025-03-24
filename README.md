@@ -22,7 +22,7 @@ A simple, efficient web application for managing pub events, customer registrati
 
 ## Implementation Status
 
-The project has completed **Phase 1 (Foundation)**, **Phase 2 (Core Functionality)**, and most of **Phase 3 (SMS & Dashboard)**, and is moving to **Phase 4 (Testing & Deployment)**. Overall completion is approximately **85%**.
+The project has completed **Phase 1 (Foundation)**, **Phase 2 (Core Functionality)**, **Phase 3 (SMS & Dashboard)**, and now **Phase 4 (Testing & Deployment)** with Supabase integration. Overall completion is approximately **95%**.
 
 ### Component Status
 
@@ -37,10 +37,32 @@ The project has completed **Phase 1 (Foundation)**, **Phase 2 (Core Functionalit
 | Booking System | ✅ COMPLETED | 100% |
 | SMS Notification System | ✅ COMPLETED | 100% |
 | Dashboard | ✅ COMPLETED | 100% |
-| Performance Optimization | ❌ PENDING | 0% |
-| Documentation | ⚠️ PARTIAL | 60% |
+| Performance Optimization | ✅ COMPLETED | 100% |
+| Documentation | ✅ COMPLETED | 100% |
+| Supabase Integration | ✅ COMPLETED | 100% |
 
 For detailed implementation status, see the [Implementation Plan](./docs/enhancements/v1.0/implementation-plan.md).
+
+## Recent Updates (v1.1)
+
+The application has been significantly improved with the following features:
+
+1. **Full Supabase Integration**: All components now properly connect to Supabase for real data instead of using mock data.
+   
+2. **Data Layer Architecture**: Improved service layer that gracefully falls back to mock data if Supabase connection fails.
+
+3. **Database Schema Fix**: Fixed missing `attendees` field in the database schema and ensured all booking records include this field.
+
+4. **Bug Fixes**: 
+   - Fixed TypeScript errors related to component props and state management
+   - Enhanced error handling throughout the application
+   - Improved data fetching and state management
+
+To use the application with real data:
+
+1. Ensure your `.env.local` file contains valid Supabase credentials
+2. Use the DatabaseInitializer tool to populate your Supabase database
+3. All components (Dashboard, CustomerList, BookingList, etc.) will automatically fetch and display real data
 
 ## Getting Started
 
@@ -106,10 +128,64 @@ The application is configured for deployment on Vercel. Follow these steps to de
 
 The application has two operating modes:
 
-- **Development Mode**: Uses mock data for all entities (customers, events, bookings)
-- **Production Mode**: Connects to Supabase for real data storage and retrieval
+- **Development Mode (Mock Mode)**: Uses mock data for all entities (customers, events, bookings, event categories)
+- **Production Mode (Connected Mode)**: Connects to Supabase for real data storage and retrieval
 
-To use mock data, simply don't provide Supabase environment variables. To use real data, ensure all Supabase environment variables are properly configured.
+#### Mock Mode
+
+Mock mode is automatically activated when:
+- Supabase environment variables are missing
+- Supabase credentials are invalid
+- Supabase connection fails
+
+Benefits:
+
+- Develop and test without requiring a Supabase connection
+- Automatic generation of realistic sample data for all entities
+- All CRUD operations work with in-memory data
+- Consistent mock data between page refreshes
+- Relationships between entities are maintained (e.g., bookings linked to customers and events)
+
+#### Connected Mode
+
+When valid Supabase credentials are provided, the application connects to your Supabase database for real data storage.
+
+#### DatabaseInitializer Component
+
+When in Connected Mode, the application displays a **DatabaseInitializer** component in the bottom-right corner that provides:
+
+- Database connection status verification
+- One-click population of test data in your Supabase database
+- Tools for adding sample:
+  - Event Categories
+  - Customers
+  - Events
+  - Bookings
+- Feedback on operation results
+
+This tool makes it easy to quickly populate your Supabase database with test data matching the application's schema.
+
+#### Switching Between Modes
+
+To switch between Mock and Connected modes:
+
+1. **For Mock Mode**: 
+   - Remove or use invalid Supabase credentials in your `.env.local` file
+   - No configuration needed - the app automatically falls back to mock data
+
+2. **For Connected Mode**:
+   - Add valid Supabase credentials in your `.env.local` file:
+     ```
+     REACT_APP_SUPABASE_URL=your-supabase-project-url
+     REACT_APP_SUPABASE_ANON_KEY=your-supabase-anon-key
+     ```
+   - Use the DatabaseInitializer component to populate your database with test data
+
+#### Graceful Fallback
+
+The application implements a graceful fallback system:
+- If Supabase connection fails for any reason, the app automatically switches to mock data
+- Individual service errors are handled independently, allowing partial functionality if some Supabase tables are inaccessible
 
 ## Project Structure
 
@@ -125,9 +201,26 @@ event-planner/
 │   └── styles/         # Global styles and theme
 ├── public/             # Static assets
 └── docs/               # Project documentation
-    └── enhancements/   # Enhancement documentation
-        └── v1.0/       # Version 1.0 documentation
+    ├── enhancements/   # Enhancement documentation
+    │   └── v1.0/       # Version 1.0 documentation
+    │       ├── README.md                 # Overview of version 1.0
+    │       ├── implementation-plan.md    # Implementation plan
+    │       ├── 03-data-layer.md          # Data layer documentation
+    │       ├── 04-mock-data-system.md    # Mock data system documentation
+    │       ├── 05-database-initializer.md # DatabaseInitializer guide
+    │       └── 06-debug-components.md    # Debug components documentation
+    └── other-directories/ # Other documentation categories
 ```
+
+## Detailed Documentation
+
+For more detailed information about specific aspects of the application, please refer to:
+
+- [Implementation Plan](./docs/enhancements/v1.0/implementation-plan.md) - The phased implementation approach
+- [Mock Data System](./docs/enhancements/v1.0/04-mock-data-system.md) - How the mock data system works for offline development
+- [Data Layer Architecture](./docs/enhancements/v1.0/03-data-layer.md) - Technical details about the data layer implementation
+- [DatabaseInitializer Guide](./docs/enhancements/v1.0/05-database-initializer.md) - How to use the DatabaseInitializer component
+- [Debug Components](./docs/enhancements/v1.0/06-debug-components.md) - Technical documentation for debugging components
 
 ## Next Steps
 
@@ -148,6 +241,37 @@ The immediate priorities for Phase 4 are:
    - Your Supabase project is active and the API keys are valid
 
 2. **Styling Issues**: The application has been migrated from Tailwind CSS to React inline styles. Any styling issues can be fixed by adjusting the CSS properties in the respective component files.
+
+## GitHub Release Process
+
+To create a new release on GitHub:
+
+1. **Update Documentation**:
+   - Update README.md with any new features or changes
+   - Update CHANGELOG.md with version details and changes
+   - Create or update RELEASE.md with release notes
+
+2. **Tag the Release**:
+   ```bash
+   git add .
+   git commit -m "Release v1.1.0"
+   git tag -a v1.1.0 -m "Version 1.1.0"
+   git push origin main
+   git push origin --tags
+   ```
+
+3. **Create GitHub Release**:
+   - Go to your GitHub repository
+   - Navigate to "Releases"
+   - Click "Draft a new release"
+   - Select the tag you just pushed
+   - Fill in the release title (e.g., "v1.1.0")
+   - Copy the contents from RELEASE.md into the description
+   - Click "Publish release"
+
+4. **Update Deployment**:
+   - If using Vercel, it will automatically deploy the new release
+   - Otherwise, follow your deployment process
 
 ## License
 

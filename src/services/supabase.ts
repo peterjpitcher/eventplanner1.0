@@ -1,12 +1,15 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+// Log all available environment variables (safely)
+console.log('Available environment variables:', Object.keys(process.env).filter(key => key.startsWith('REACT_APP_')));
+
 // Get environment variables
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
 
 // More explicit debugging to help diagnose issues
-console.log(`Supabase URL is ${supabaseUrl ? 'set' : 'missing'}`);
-console.log(`Supabase Anon Key is ${supabaseAnonKey ? 'set' : 'missing'}`);
+console.log(`Supabase URL is ${supabaseUrl ? 'set: ' + supabaseUrl.substring(0, 15) + '...' : 'missing'}`);
+console.log(`Supabase Anon Key is ${supabaseAnonKey ? 'set: ' + supabaseAnonKey.substring(0, 5) + '...' : 'missing'}`);
 
 // Determine if we should use the real Supabase client or a mock version
 const useMockData = !supabaseUrl || !supabaseAnonKey;
@@ -20,6 +23,35 @@ if (useMockData) {
   if (!supabaseAnonKey) console.error('REACT_APP_SUPABASE_ANON_KEY is missing or empty');
 } else {
   console.log('PRODUCTION MODE: Connected to Supabase for real data.');
+}
+
+// Attempt to connect to Supabase even without proper environment variables
+// This will help diagnose if the issue is with the Supabase connection itself
+let supabaseInstance: SupabaseClient | null = null;
+try {
+  if (!useMockData) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('Supabase client created successfully.');
+    
+    // Test the connection with async function
+    const testConnection = async () => {
+      try {
+        const response = await supabaseInstance!.from('customers').select('count', { count: 'exact', head: true });
+        if (response.error) {
+          console.error('Failed to connect to Supabase:', response.error.message);
+        } else {
+          console.log(`Successfully connected to Supabase! Found ${response.count} customers.`);
+        }
+      } catch (error: any) {
+        console.error('Error testing Supabase connection:', error.message);
+      }
+    };
+    
+    // Execute the test
+    testConnection();
+  }
+} catch (err) {
+  console.error('Error creating Supabase client:', err);
 }
 
 // Create a mock implementation of SupabaseClient for development without credentials
@@ -47,7 +79,7 @@ const createMockClient = (): SupabaseClient => {
 // Export either the real Supabase client or the mock version
 export const supabase = useMockData 
   ? createMockClient() 
-  : createClient(supabaseUrl, supabaseAnonKey);
+  : (supabaseInstance || createMockClient());
 
 // Export a flag that indicates whether we're using mock data
 export const isMockMode = useMockData;
@@ -57,5 +89,7 @@ export const isMockMode = useMockData;
 export const supabaseStatus = {
   hasUrl: !!supabaseUrl,
   hasKey: !!supabaseAnonKey,
+  urlValue: supabaseUrl ? `${supabaseUrl.substring(0, 8)}...` : 'missing',
+  keyValue: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 4)}...` : 'missing',
   isMockMode
 }; 

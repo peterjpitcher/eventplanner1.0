@@ -3,7 +3,6 @@ export interface Customer {
   first_name: string;
   last_name: string;
   mobile_number: string;
-  email?: string;
   notes?: string;
   created_at: string;
 }
@@ -28,6 +27,12 @@ export interface Event {
   category?: EventCategory;
   event_category?: EventCategory;
   remaining_capacity?: number;
+}
+
+// Event type with full relation data expanded
+export interface EventWithRelations extends Event {
+  category: EventCategory;
+  bookings: Booking[];
 }
 
 export interface Booking {

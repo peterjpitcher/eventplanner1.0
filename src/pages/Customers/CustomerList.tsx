@@ -16,22 +16,12 @@ const CustomerList: React.FC = () => {
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      // Create mock data for development
-      const mockCustomers = Array(15).fill(null).map((_, i) => ({
-        id: String(i + 1),
-        first_name: 'Customer',
-        last_name: `${i + 1}`,
-        email: `customer${i + 1}@example.com`,
-        mobile_number: `+1234567890${i}`,
-        notes: i % 3 === 0 ? 'VIP Customer' : '',
-        created_at: new Date(Date.now() - i * 86400000).toISOString()
-      }));
-      
-      setCustomers(mockCustomers);
+      const data = await customerService.getAllCustomers();
+      setCustomers(data);
       setError(null);
-    } catch (err) {
+    } catch (error) {
       setError('Failed to load customers. Please try again later.');
-      console.error(err);
+      console.error('Error loading customers:', error);
     } finally {
       setLoading(false);
     }
@@ -45,18 +35,20 @@ const CustomerList: React.FC = () => {
 
     try {
       setLoading(true);
-      // Filter mock data based on search query
-      const data = customers.filter(customer => 
-        `${customer.first_name} ${customer.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.mobile_number.includes(searchQuery)
-      );
+      const data = await customerService.searchCustomers(searchQuery);
       setCustomers(data);
       setError(null);
-    } catch (err) {
+    } catch (error) {
       setError('Failed to search customers. Please try again later.');
-      console.error(err);
+      console.error('Error searching customers:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
     }
   };
 
@@ -230,7 +222,7 @@ const CustomerList: React.FC = () => {
             style={inputStyle}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyDown={handleKeyDown}
           />
           <button
             onClick={handleSearch}
