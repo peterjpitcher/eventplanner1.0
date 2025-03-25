@@ -105,8 +105,8 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
     }
     
     const attendees = parseInt(formData.attendees);
-    if (isNaN(attendees) || attendees <= 0) {
-      setError('Number of attendees must be a positive number');
+    if (isNaN(attendees) || attendees < 0) {
+      setError('Number of attendees must be zero or a positive number');
       return false;
     }
     
@@ -398,13 +398,14 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
             id="attendees"
             name="attendees"
             type="number"
-            min="1"
+            min="0"
             placeholder="Number of Attendees"
             value={formData.attendees}
             onChange={handleChange}
             disabled={loading}
             required
           />
+          <p style={helperTextStyle}>Enter 0 for reminder-only bookings</p>
         </div>
         
         <div style={{...formGroupStyle, marginBottom: '1.5rem'}}>

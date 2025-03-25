@@ -20,20 +20,23 @@ const EventCategoryForm: React.FC<EventCategoryFormProps> = ({ initialData = {},
     notes: initialData.notes || '',
   });
   
-  // Fetch category data when editing and initialData is empty
+  // Always fetch category data when editing to ensure we have the correct data
   useEffect(() => {
-    if (isEdit && id && (!initialData.name || Object.keys(initialData).length === 0)) {
+    if (isEdit && id) {
       const fetchCategoryData = async () => {
         try {
           setLoading(true);
           const categoryData = await eventCategoryService.getCategoryById(id);
           if (categoryData) {
+            console.log('Fetched category data:', categoryData);
             setFormData({
               name: categoryData.name || '',
               default_capacity: categoryData.default_capacity?.toString() || '50',
               default_start_time: categoryData.default_start_time || '09:00',
               notes: categoryData.notes || '',
             });
+          } else {
+            setError('Category not found');
           }
         } catch (err) {
           console.error('Error fetching category data:', err);
@@ -45,7 +48,7 @@ const EventCategoryForm: React.FC<EventCategoryFormProps> = ({ initialData = {},
       
       fetchCategoryData();
     }
-  }, [id, isEdit, initialData]);
+  }, [id, isEdit]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
