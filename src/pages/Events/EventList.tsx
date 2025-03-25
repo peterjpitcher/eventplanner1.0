@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Event } from '../../types/database.types';
 import { eventService } from '../../services/eventService';
+import { formatDate, formatTime } from '../../utils/formatUtils';
 
 const EventList: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showPastEvents, setShowPastEvents] = useState(false);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     loadEvents();
@@ -43,15 +46,46 @@ const EventList: React.FC = () => {
     }
   };
 
-  const filteredEvents = events.filter(event => 
-    event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (event.category?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-  );
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const toggleSortDirection = () => {
+    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
   };
+  
+  const togglePastEvents = () => {
+    setShowPastEvents(prev => !prev);
+  };
+  
+  const getCurrentDate = () => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now;
+  };
+  
+  const sortAndFilterEvents = (events: Event[]) => {
+    const now = getCurrentDate();
+    
+    const filteredEvents = events.filter(event => {
+      const eventDate = new Date(event.start_time);
+      const isPastEvent = eventDate < now;
+      
+      return showPastEvents ? true : !isPastEvent;
+    });
+    
+    const searchFiltered = filteredEvents.filter(event => 
+      event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.category?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+    );
+    
+    return searchFiltered.sort((a, b) => {
+      const dateA = new Date(a.start_time).getTime();
+      const dateB = new Date(b.start_time).getTime();
+      
+      return sortDirection === 'asc' 
+        ? dateA - dateB
+        : dateB - dateA;
+    });
+  };
+  
+  const filteredEvents = sortAndFilterEvents(events);
 
   // Common styles
   const pageStyle: React.CSSProperties = {
@@ -208,6 +242,51 @@ const EventList: React.FC = () => {
     fontSize: '0.875rem'
   };
 
+  const filterContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '1rem'
+  };
+  
+  const filterToggleStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem'
+  };
+  
+  const toggleLabelStyle: React.CSSProperties = {
+    fontSize: '0.875rem',
+    color: '#4B5563'
+  };
+  
+  const checkboxStyle: React.CSSProperties = {
+    cursor: 'pointer'
+  };
+  
+  const sortButtonStyle: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    cursor: 'pointer',
+    color: '#6B7280',
+    padding: 0,
+    fontSize: '0.75rem',
+    fontWeight: 500
+  };
+  
+  const sortIconStyle: React.CSSProperties = {
+    marginLeft: '0.25rem',
+    fontSize: '0.75rem'
+  };
+  
+  const pastEventRowStyle: React.CSSProperties = {
+    ...tableRowStyle,
+    backgroundColor: '#F9FAFB',
+    color: '#9CA3AF'
+  };
+
   return (
     <div style={pageStyle}>
       <div style={headerContainerStyle}>
@@ -236,6 +315,26 @@ const EventList: React.FC = () => {
         />
       </div>
 
+      <div style={filterContainerStyle}>
+        <div style={filterToggleStyle}>
+          <input
+            type="checkbox"
+            id="showPastEvents"
+            checked={showPastEvents}
+            onChange={togglePastEvents}
+            style={checkboxStyle}
+          />
+          <label htmlFor="showPastEvents" style={toggleLabelStyle}>Show Past Events</label>
+        </div>
+        <button
+          onClick={toggleSortDirection}
+          style={sortButtonStyle}
+        >
+          Sort: {sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+          <span style={sortIconStyle}>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+        </button>
+      </div>
+
       {error && <div style={errorStyle}>{error}</div>}
 
       {loading ? (
@@ -257,7 +356,16 @@ const EventList: React.FC = () => {
                   Category
                 </th>
                 <th style={tableHeaderCellStyle}>
-                  Date & Time
+                  <button 
+                    style={sortButtonStyle}
+                    onClick={toggleSortDirection}
+                    title={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
+                  >
+                    Date & Time
+                    <span style={sortIconStyle}>
+                      {sortDirection === 'asc' ? ' ↑' : ' ↓'}
+                    </span>
+                  </button>
                 </th>
                 <th style={tableHeaderCellStyle}>
                   Capacity
@@ -268,61 +376,69 @@ const EventList: React.FC = () => {
               </tr>
             </thead>
             <tbody style={tableBodyStyle}>
-              {filteredEvents.map((event) => (
-                <tr key={event.id} style={tableRowStyle}>
-                  <td style={tableCellStyle}>
-                    <div style={nameCellStyle}>
-                      <Link 
-                        to={`/events/${event.id}`} 
-                        style={nameLinkStyle}
+              {filteredEvents.map((event) => {
+                const eventDate = new Date(event.start_time);
+                const isPastEvent = eventDate < getCurrentDate();
+                const rowStyle = isPastEvent ? pastEventRowStyle : tableRowStyle;
+                
+                return (
+                  <tr key={event.id} style={rowStyle}>
+                    <td style={tableCellStyle}>
+                      <div style={nameCellStyle}>
+                        <Link 
+                          to={`/events/${event.id}`} 
+                          style={{...nameLinkStyle, color: isPastEvent ? '#9CA3AF' : '#111827'}}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#4F46E5';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = isPastEvent ? '#9CA3AF' : '#111827';
+                          }}
+                        >
+                          {event.name}
+                        </Link>
+                      </div>
+                    </td>
+                    <td style={tableCellStyle}>
+                      <div style={categoryCellStyle}>{event.category?.name || 'Unknown'}</div>
+                    </td>
+                    <td style={tableCellStyle}>
+                      <div style={dateCellStyle}>
+                        {formatDate(event.start_time)} at {formatTime(event.start_time)}
+                      </div>
+                    </td>
+                    <td style={tableCellStyle}>
+                      <div style={capacityCellStyle}>{event.capacity}</div>
+                    </td>
+                    <td style={actionCellStyle}>
+                      <Link
+                        to={`/events/${event.id}/edit`}
+                        style={editLinkStyle}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#4F46E5';
+                          e.currentTarget.style.color = '#4338CA';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#111827';
+                          e.currentTarget.style.color = '#4F46E5';
                         }}
                       >
-                        {event.name}
+                        Edit
                       </Link>
-                    </div>
-                  </td>
-                  <td style={tableCellStyle}>
-                    <div style={categoryCellStyle}>{event.category?.name || 'Unknown'}</div>
-                  </td>
-                  <td style={tableCellStyle}>
-                    <div style={dateCellStyle}>{formatDate(event.start_time)}</div>
-                  </td>
-                  <td style={tableCellStyle}>
-                    <div style={capacityCellStyle}>{event.capacity}</div>
-                  </td>
-                  <td style={actionCellStyle}>
-                    <Link
-                      to={`/events/${event.id}/edit`}
-                      style={editLinkStyle}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = '#4338CA';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = '#4F46E5';
-                      }}
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(event.id, event.name)}
-                      style={deleteButtonStyle}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = '#B91C1C';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = '#DC2626';
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      <button
+                        onClick={() => handleDelete(event.id, event.name)}
+                        style={deleteButtonStyle}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#B91C1C';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#DC2626';
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Booking } from '../../types/database.types';
 import { bookingService } from '../../services/bookingService';
+import { formatDateTime } from '../../utils/formatUtils';
 
 const BookingDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,12 +45,6 @@ const BookingDetails: React.FC = () => {
         setLoading(false);
       }
     }
-  };
-
-  const formatDateTime = (dateString: string) => {
-    if (!dateString) return 'Unknown';
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   if (loading) {

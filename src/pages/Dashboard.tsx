@@ -5,6 +5,7 @@ import { eventService } from '../services/eventService';
 import { bookingService } from '../services/bookingService';
 import { eventCategoryService } from '../services/eventCategoryService';
 import { Event, Booking } from '../types/database.types';
+import { formatDate, formatTime } from '../utils/formatUtils';
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState({
@@ -61,26 +62,6 @@ const Dashboard: React.FC = () => {
       setError('Failed to load dashboard data. Please try again later.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Format date string to local format
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
-    } catch (error) {
-      return 'Invalid date';
-    }
-  };
-
-  // Format time string to local format
-  const formatTime = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (error) {
-      return 'Invalid time';
     }
   };
 

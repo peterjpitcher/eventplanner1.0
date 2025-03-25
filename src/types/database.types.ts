@@ -44,4 +44,7 @@ export interface Booking {
   created_at: string;
   customer?: Customer;
   event?: Event;
+  
+  // Use a regular property instead of a getter to avoid TypeScript errors
+  seats?: number;
 } 

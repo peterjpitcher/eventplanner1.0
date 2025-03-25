@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EventCategory } from '../../types/database.types';
 import { eventCategoryService } from '../../services/eventCategoryService';
@@ -19,6 +19,33 @@ const EventCategoryForm: React.FC<EventCategoryFormProps> = ({ initialData = {},
     default_start_time: initialData.default_start_time || '09:00',
     notes: initialData.notes || '',
   });
+  
+  // Fetch category data when editing and initialData is empty
+  useEffect(() => {
+    if (isEdit && id && (!initialData.name || Object.keys(initialData).length === 0)) {
+      const fetchCategoryData = async () => {
+        try {
+          setLoading(true);
+          const categoryData = await eventCategoryService.getCategoryById(id);
+          if (categoryData) {
+            setFormData({
+              name: categoryData.name || '',
+              default_capacity: categoryData.default_capacity?.toString() || '50',
+              default_start_time: categoryData.default_start_time || '09:00',
+              notes: categoryData.notes || '',
+            });
+          }
+        } catch (err) {
+          console.error('Error fetching category data:', err);
+          setError('Failed to load category data. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchCategoryData();
+    }
+  }, [id, isEdit, initialData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -188,131 +215,135 @@ const EventCategoryForm: React.FC<EventCategoryFormProps> = ({ initialData = {},
         </div>
       )}
       
-      <form onSubmit={handleSubmit} style={formStyle}>
-        <div style={formGroupStyle}>
-          <label 
-            style={labelStyle} 
-            htmlFor="name"
-          >
-            Category Name *
-          </label>
-          <input
-            style={inputStyle}
-            id="name"
-            name="name"
-            type="text"
-            placeholder="Category Name"
-            value={formData.name}
-            onChange={handleChange}
-            disabled={loading}
-            required
-          />
-        </div>
-        
-        <div style={formGroupStyle}>
-          <label 
-            style={labelStyle} 
-            htmlFor="default_capacity"
-          >
-            Default Capacity *
-          </label>
-          <input
-            style={inputStyle}
-            id="default_capacity"
-            name="default_capacity"
-            type="number"
-            min="1"
-            placeholder="Default Capacity"
-            value={formData.default_capacity}
-            onChange={handleChange}
-            disabled={loading}
-            required
-          />
-        </div>
-        
-        <div style={formGroupStyle}>
-          <label 
-            style={labelStyle} 
-            htmlFor="default_start_time"
-          >
-            Default Start Time *
-          </label>
-          <input
-            style={inputStyle}
-            id="default_start_time"
-            name="default_start_time"
-            type="time"
-            placeholder="Default Start Time"
-            value={formData.default_start_time}
-            onChange={handleChange}
-            disabled={loading}
-            required
-          />
-        </div>
-        
-        <div style={{...formGroupStyle, marginBottom: '1.5rem'}}>
-          <label 
-            style={labelStyle} 
-            htmlFor="notes"
-          >
-            Notes
-          </label>
-          <textarea
-            style={inputStyle}
-            id="notes"
-            name="notes"
-            placeholder="Notes"
-            value={formData.notes}
-            onChange={handleChange}
-            disabled={loading}
-            rows={4}
-          />
-        </div>
-        
-        <div style={buttonContainerStyle}>
-          <button
-            style={{
-              ...cancelButtonStyle,
-              ...(loading ? disabledButtonStyle : {})
-            }}
-            type="button"
-            onClick={() => navigate('/event-categories')}
-            disabled={loading}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = '#4B5563';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = '#6B7280';
-              }
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            style={{
-              ...submitButtonStyle,
-              ...(loading ? disabledButtonStyle : {})
-            }}
-            type="submit"
-            disabled={loading}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = '#4338CA';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = '#4F46E5';
-              }
-            }}
-          >
-            {loading ? 'Saving...' : isEdit ? 'Update Category' : 'Add Category'}
-          </button>
-        </div>
-      </form>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '2rem' }}>Loading category data...</div>
+      ) : (
+        <form onSubmit={handleSubmit} style={formStyle}>
+          <div style={formGroupStyle}>
+            <label 
+              style={labelStyle} 
+              htmlFor="name"
+            >
+              Category Name *
+            </label>
+            <input
+              style={inputStyle}
+              id="name"
+              name="name"
+              type="text"
+              placeholder="Category Name"
+              value={formData.name}
+              onChange={handleChange}
+              disabled={loading}
+              required
+            />
+          </div>
+          
+          <div style={formGroupStyle}>
+            <label 
+              style={labelStyle} 
+              htmlFor="default_capacity"
+            >
+              Default Capacity *
+            </label>
+            <input
+              style={inputStyle}
+              id="default_capacity"
+              name="default_capacity"
+              type="number"
+              min="1"
+              placeholder="Default Capacity"
+              value={formData.default_capacity}
+              onChange={handleChange}
+              disabled={loading}
+              required
+            />
+          </div>
+          
+          <div style={formGroupStyle}>
+            <label 
+              style={labelStyle} 
+              htmlFor="default_start_time"
+            >
+              Default Start Time *
+            </label>
+            <input
+              style={inputStyle}
+              id="default_start_time"
+              name="default_start_time"
+              type="time"
+              placeholder="Default Start Time"
+              value={formData.default_start_time}
+              onChange={handleChange}
+              disabled={loading}
+              required
+            />
+          </div>
+          
+          <div style={{...formGroupStyle, marginBottom: '1.5rem'}}>
+            <label 
+              style={labelStyle} 
+              htmlFor="notes"
+            >
+              Notes
+            </label>
+            <textarea
+              style={inputStyle}
+              id="notes"
+              name="notes"
+              placeholder="Notes"
+              value={formData.notes}
+              onChange={handleChange}
+              disabled={loading}
+              rows={4}
+            />
+          </div>
+          
+          <div style={buttonContainerStyle}>
+            <button
+              style={{
+                ...cancelButtonStyle,
+                ...(loading ? disabledButtonStyle : {})
+              }}
+              type="button"
+              onClick={() => navigate('/event-categories')}
+              disabled={loading}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = '#4B5563';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = '#6B7280';
+                }
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              style={{
+                ...submitButtonStyle,
+                ...(loading ? disabledButtonStyle : {})
+              }}
+              type="submit"
+              disabled={loading}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = '#4338CA';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = '#4F46E5';
+                }
+              }}
+            >
+              {loading ? 'Saving...' : isEdit ? 'Update Category' : 'Add Category'}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 };

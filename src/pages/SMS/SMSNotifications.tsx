@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Customer, Event } from '../../types/database.types';
 import { customerService } from '../../services/customerService';
 import { SMS_TEMPLATES, smsService } from '../../services/smsService';
 import { eventService } from '../../services/eventService';
 import { bookingService } from '../../services/bookingService';
+import { formatDateTime } from '../../utils/formatUtils';
 
 const SMSNotifications: React.FC = () => {
   // State for customer selection for individual messages
@@ -174,12 +175,6 @@ const SMSNotifications: React.FC = () => {
     }
   };
   
-  const formatDateTime = (dateString: string) => {
-    if (!dateString) return 'Unknown';
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
   // Define styles
   const pageStyle: React.CSSProperties = {
     display: 'flex',

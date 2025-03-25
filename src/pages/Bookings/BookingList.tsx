@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Booking } from '../../types/database.types';
 import { bookingService } from '../../services/bookingService';
+import { formatDateTime } from '../../utils/formatUtils';
 
 const BookingList: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -44,12 +45,6 @@ const BookingList: React.FC = () => {
         setError('Failed to delete booking. Please try again.');
       }
     }
-  };
-
-  const formatDateTime = (dateString: string) => {
-    if (!dateString) return 'Unknown';
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const filteredBookings = bookings.filter(booking => {
@@ -217,6 +212,29 @@ const BookingList: React.FC = () => {
     fontSize: '0.875rem'
   };
 
+  // Add styles for the badge
+  const seatCountBadgeStyle: React.CSSProperties = {
+    display: 'inline-block',
+    backgroundColor: '#E5E7EB',
+    color: '#4B5563',
+    borderRadius: '9999px',
+    padding: '0.25rem 0.75rem',
+    fontSize: '0.75rem',
+    fontWeight: 'bold',
+    marginLeft: '0.5rem'
+  };
+  
+  const reminderOnlyBadgeStyle: React.CSSProperties = {
+    display: 'inline-block',
+    backgroundColor: '#DBEAFE',
+    color: '#1E40AF',
+    borderRadius: '9999px',
+    padding: '0.25rem 0.75rem',
+    fontSize: '0.75rem',
+    fontWeight: 'bold',
+    marginLeft: '0.5rem'
+  };
+
   return (
     <div style={pageStyle}>
       <div style={headerContainerStyle}>
@@ -264,6 +282,9 @@ const BookingList: React.FC = () => {
                 </th>
                 <th style={tableHeaderCellStyle}>
                   Event
+                </th>
+                <th style={tableHeaderCellStyle}>
+                  Seats
                 </th>
                 <th style={tableHeaderCellStyle}>
                   Date & Time
@@ -318,6 +339,13 @@ const BookingList: React.FC = () => {
                         'Unknown Event'
                       )}
                     </div>
+                  </td>
+                  <td style={tableCellStyle}>
+                    {booking.attendees === 0 ? (
+                      <span style={reminderOnlyBadgeStyle}>Reminder Only</span>
+                    ) : (
+                      <span style={seatCountBadgeStyle}>{booking.attendees} {booking.attendees === 1 ? 'Seat' : 'Seats'}</span>
+                    )}
                   </td>
                   <td style={tableCellStyle}>
                     <div style={dateCellStyle}>

@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Event, Booking } from '../../types/database.types';
 import { eventService } from '../../services/eventService';
 import { supabase } from '../../services/supabase';
+import { formatDateTime } from '../../utils/formatUtils';
 
 const EventDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -64,9 +65,25 @@ const EventDetails: React.FC = () => {
     }
   };
 
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // Add a function to calculate total attendees
+  const calculateTotalAttendees = (): number => {
+    return bookings.reduce((total, booking) => total + booking.attendees, 0);
+  };
+  
+  // Add a function to get capacity status styling
+  const getCapacityStatusStyle = (): React.CSSProperties => {
+    if (!event) return {};
+    
+    const totalAttendees = calculateTotalAttendees();
+    const percentFull = (totalAttendees / event.capacity) * 100;
+    
+    if (percentFull >= 90) {
+      return { color: '#B91C1C', backgroundColor: '#FEE2E2', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' };
+    } else if (percentFull >= 70) {
+      return { color: '#92400E', backgroundColor: '#FEF3C7', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' };
+    } else {
+      return { color: '#166534', backgroundColor: '#DCFCE7', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' };
+    }
   };
 
   if (loading) {
@@ -138,9 +155,11 @@ const EventDetails: React.FC = () => {
           <div>
             <p className="text-gray-600">Capacity</p>
             <p className="font-medium">
-              {bookings.length} / {event.capacity} 
-              <span className="ml-2 text-sm text-gray-500">
-                ({event.capacity - bookings.length} available)
+              <span style={getCapacityStatusStyle()}>
+                {calculateTotalAttendees()} / {event.capacity} 
+                <span className="ml-2 text-sm">
+                  ({event.capacity - calculateTotalAttendees()} available)
+                </span>
               </span>
             </p>
           </div>

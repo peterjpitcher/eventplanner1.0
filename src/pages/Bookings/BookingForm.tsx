@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Booking, Customer, Event } from '../../types/database.types';
 import { bookingService } from '../../services/bookingService';
 import { customerService } from '../../services/customerService';
 import { eventService } from '../../services/eventService';
+import { formatDateTime } from '../../utils/formatUtils';
 
 type BookingFormProps = {
   initialData?: Partial<Booking>;
@@ -157,15 +158,6 @@ const BookingForm: React.FC<BookingFormProps> = ({ initialData = {}, isEdit = fa
       setError('Failed to save booking. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const formatDateTime = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (error) {
-      return 'Invalid date';
     }
   };
 

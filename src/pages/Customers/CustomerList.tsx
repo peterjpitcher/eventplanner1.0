@@ -8,6 +8,7 @@ const CustomerList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     loadCustomers();
@@ -17,7 +18,9 @@ const CustomerList: React.FC = () => {
     try {
       setLoading(true);
       const data = await customerService.getAllCustomers();
-      setCustomers(data);
+      // Sort customers alphabetically by name
+      const sortedData = sortCustomers(data, sortOrder);
+      setCustomers(sortedData);
       setError(null);
     } catch (error) {
       setError('Failed to load customers. Please try again later.');
@@ -25,6 +28,25 @@ const CustomerList: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const sortCustomers = (customers: Customer[], order: 'asc' | 'desc'): Customer[] => {
+    return [...customers].sort((a, b) => {
+      const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
+      const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
+      
+      if (order === 'asc') {
+        return nameA.localeCompare(nameB);
+      } else {
+        return nameB.localeCompare(nameA);
+      }
+    });
+  };
+
+  const toggleSortOrder = () => {
+    const newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    setSortOrder(newOrder);
+    setCustomers(sortCustomers(customers, newOrder));
   };
 
   const handleSearch = async () => {
@@ -36,7 +58,9 @@ const CustomerList: React.FC = () => {
     try {
       setLoading(true);
       const data = await customerService.searchCustomers(searchQuery);
-      setCustomers(data);
+      // Apply sorting to search results
+      const sortedData = sortCustomers(data, sortOrder);
+      setCustomers(sortedData);
       setError(null);
     } catch (error) {
       setError('Failed to search customers. Please try again later.');
@@ -196,6 +220,24 @@ const CustomerList: React.FC = () => {
     marginRight: '1rem'
   };
 
+  // Add styles for the sort button and sort indicator
+  const sortButtonStyle: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    cursor: 'pointer',
+    color: '#6B7280',
+    padding: 0,
+    fontSize: '0.75rem',
+    fontWeight: 500
+  };
+
+  const sortIconStyle: React.CSSProperties = {
+    marginLeft: '0.25rem',
+    fontSize: '0.75rem'
+  };
+
   return (
     <div style={pageStyle}>
       <div style={headerContainerStyle}>
@@ -218,11 +260,11 @@ const CustomerList: React.FC = () => {
         <div style={searchRowStyle}>
           <input
             type="text"
-            placeholder="Search by name or phone"
-            style={inputStyle}
+            placeholder="Search customers..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            style={inputStyle}
           />
           <button
             onClick={handleSearch}
@@ -236,23 +278,21 @@ const CustomerList: React.FC = () => {
           >
             Search
           </button>
-          {searchQuery && (
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                loadCustomers();
-              }}
-              style={secondaryButtonStyle}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#D1D5DB';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#E5E7EB';
-              }}
-            >
-              Clear
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              loadCustomers();
+            }}
+            style={secondaryButtonStyle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#D1D5DB';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#E5E7EB';
+            }}
+          >
+            Clear
+          </button>
         </div>
       </div>
 
@@ -270,14 +310,19 @@ const CustomerList: React.FC = () => {
             <thead style={tableHeadStyle}>
               <tr>
                 <th style={tableHeaderCellStyle}>
-                  Name
+                  <button 
+                    style={sortButtonStyle}
+                    onClick={toggleSortOrder}
+                    title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                  >
+                    Name
+                    <span style={sortIconStyle}>
+                      {sortOrder === 'asc' ? ' ↑' : ' ↓'}
+                    </span>
+                  </button>
                 </th>
-                <th style={tableHeaderCellStyle}>
-                  Mobile
-                </th>
-                <th style={tableHeaderCellStyle}>
-                  Actions
-                </th>
+                <th style={tableHeaderCellStyle}>Mobile</th>
+                <th style={tableHeaderCellStyle}>Actions</th>
               </tr>
             </thead>
             <tbody style={tableBodyStyle}>

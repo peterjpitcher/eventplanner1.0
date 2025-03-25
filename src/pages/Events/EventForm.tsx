@@ -67,9 +67,12 @@ const EventForm: React.FC<EventFormProps> = ({ initialData = {}, isEdit = false 
         const categoryData = await eventCategoryService.getAllCategories();
         setCategories(categoryData);
         
-        // If this is a new event and categories are available, set the first category as default
+        // Only set a default category for new events if none is selected
+        // and there are categories available
         if (!isEdit && categoryData.length > 0 && !formData.category_id) {
-          handleCategoryChange(categoryData[0].id);
+          // Don't automatically select the first category
+          // Let the user choose from the "Select a category" option
+          setFormData(prev => ({...prev, category_id: ''}));
         }
       } catch (err) {
         console.error('Error loading categories:', err);
