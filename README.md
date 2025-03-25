@@ -341,3 +341,11 @@ To create a new release on GitHub:
 ## License
 
 This project is licensed under the MIT License.
+
+## Deployment History
+
+### March 25, 2025 - Rollback to v1978bfd
+* Rolled back to commit 1978bfd due to stability issues in later versions
+* Fixed casing issues with SMS service files
+* Successfully deployed to production
+* Production URL: https://eventplanner1-0-gl1mukso2-peter-pitchers-projects.vercel.app
