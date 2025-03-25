@@ -22,6 +22,13 @@
    - ✅ Add functionality to view past events (with toggle to show/hide)
    - ✅ Implement capacity display (booked/total) on event details page
 
+### Additional Fixes (Phase 1.1)
+
+1. **Critical Fixes**
+   - ✅ Fixed issue where category ID was displayed instead of category name in the edit form
+   - ✅ Updated BookingForm to allow zero attendees for reminder-only bookings
+   - ✅ Added helper text to indicate that zero attendees is for reminder-only bookings
+
 ### All Phase 1 Requirements Met
 
 ✅ Phase 1 of the implementation plan has been completed. The changes include:
@@ -31,20 +38,22 @@
 3. Added sorting capabilities for better data organization 
 4. Improved event capacity display
 5. Added the ability to view past events
+6. Fixed critical issues with the event category edit form and bookings form
 
-### Next Steps
+### Phase 2 Start: Booking & Interface Enhancements
 
-Prepare for Phase 2: Booking & Interface Enhancements:
-- Modify booking form to allow 0 seats
-- Update validation logic for bookings
-- Group bookings by event
-- Update SMS templates
+- ✅ Modified booking form to allow 0 seats (completed in Phase 1.1)
+- ⬜ Update validation logic for bookings
+- ⬜ Group bookings by event in accordion style UI
+- ⬜ Sort bookings alphabetically by customer name
+- ⬜ Update SMS templates
 
 ## Notes
 
 - All date/time formatting has been standardized using British English formatting
 - Booking seat count is sourced from the `attendees` field in the booking model
-- Event category form now properly fetches and displays data when editing, fixing the previous issue
+- Event category form now properly fetches and displays data when editing, fixing the issue where IDs were displayed instead of names
 - The customer list now has alphabetical sorting capability
 - Events list now allows viewing past events with visual differentiation
-- Event details now show accurate capacity information with color coding based on availability 
+- Event details now show accurate capacity information with color coding based on availability
+- Bookings can now be created with 0 attendees for reminder-only purposes 
